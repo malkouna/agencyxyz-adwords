@@ -1,0 +1,104 @@
+<?php
+function crawler_install() {
+  drupal_install_schema('crawler');
+}
+
+function crawler_uninstall() {
+  drupal_uninstall_schema('crawler');
+}
+
+function crawler_schema() {
+$schema['adwords_crawler_links'] = array(
+  'description' => t('TODO: please describe this table!'),
+  'fields' => array(
+    'id' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'serial',
+      'not null' => TRUE,
+    ),
+    'host_id' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+    'url' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'varchar',
+      'length' => '2000',
+      'not null' => FALSE,
+    ),
+    'article_id' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'varchar',
+      'length' => '45',
+      'not null' => FALSE,
+    ),
+    'title' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'varchar',
+      'length' => '100',
+      'not null' => FALSE,
+    ),
+    'breadcrumb' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'varchar',
+      'length' => '200',
+      'not null' => FALSE,
+    ),
+    'description' => array(
+      'description' => t('TODO: please describe this field!'),
+      'type' => 'varchar',
+      'length' => '150',
+      'not null' => FALSE,
+    ),
+    'crawled' => array(
+      'description' => t('Tracks if this url has been crawled'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+    'keywords_generated' => array(
+      'description' => t('Tracks if this url had keywords generated for it'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+    'processed' => array(
+      'description' => t('Tracks if this url has been updated in AdWords'),
+      'type' => 'int',
+      'not null' => TRUE,
+    ),
+  ),
+  'primary key' => array('id'),
+);
+  
+
+  $schema['adwords_crawler_keywords'] = array(
+    'description' => t('TODO: please describe this table!'),
+    'fields' => array(
+      'id' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'host_id' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'url' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'varchar',
+        'length' => '2000',
+        'not null' => TRUE,
+      ),
+      'keyword' => array(
+        'description' => t('TODO: please describe this field!'),
+        'type' => 'varchar',
+        'length' => '80',
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  
+  return $schema;
+}

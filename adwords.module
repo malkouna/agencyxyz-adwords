@@ -1,0 +1,275 @@
+<?php
+/**
+ * @file
+ * This module contains a list of helper functions for the Agency XYZ
+ * website.
+ */
+
+/**
+ * Implement hook_perm().
+ */
+function adwords_perm() {
+  return array('access adwords', 'manage adwords', 'administer adwords');
+}
+/**
+ * Implement hook_menu().
+ */
+function adwords_menu() {
+  $items['adwords/login'] = array(
+    'title' => 'Login to AdWords',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_adwords_login'),
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.login.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['adwords/clients'] = array(
+    'title' => 'Clients',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_adwords_clients'),
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.clients.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['adwords/listreports'] = array(
+    'title' => 'Report',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_adwords_list_reports'),
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.report.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['adwords/downloadreport'] = array(
+    'title' => 'Report',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_adwords_download_report'),
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.report.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['adwords/auto'] = array(
+    'title' => 'Process AdWords Reports',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_adwords_process'),
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.process.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );  
+  $items['adwords/report'] = array(
+    'title' => 'AdWords Client Report',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('adwords_report_form'),
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.report.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );  
+  $items['adwords/daily'] = array(
+    'title' => 'AdWords Daily Overview',
+    'page callback' => 'adwords_daily_overview',
+    'access arguments' => array('access adwords'),
+    'file' => 'adwords.daily.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['adwords/daily/all'] = array(
+    'title' => t('All'),
+    'page callback' => 'adwords_daily_overview',
+    'access arguments' => array('access adwords'),
+    'file' => 'adwords.daily.inc',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  
+  $items['adwords/daily/account'] = array(
+    'title' => t('My Clients'),
+    'page callback' => 'adwords_daily_overview',
+    'page arguments' => array(true),
+    'access arguments' => array('access adwords'),
+    'file' => 'adwords.daily.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['adwords/daily/detail/%'] = array(
+    'title' => 'AdWords Daily Traffic',
+    'page callback' => 'adwords_daily_traffic',
+    'page arguments' => array(3),
+    'access arguments' => array('access adwords'),
+    'file' => 'adwords.daily.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['adwords/daily/detail/%/configure'] = array(
+    'title' => 'Configure AdWords Daily Traffic Report',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('adwords_daily_traffic_configure',3),
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.daily.configure.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['adwords/budgets/%'] = array(
+    'title' => 'AdWords Campaign Budget',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('adwords_campaign_budget', 2),
+    'access arguments' => array('access adwords'),
+    'file' => 'adwords.daily.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['adwords/daily/note/%/%'] = array(
+    'title' => 'Add note to report',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('adwords_daily_note', 3, 4),
+    'access arguments' => array('access adwords'),
+    'file' => 'adwords.daily.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['adwords/daily/note/%/%'] = array(
+    'title' => 'Add note to report',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('adwords_daily_note', 3, 4),
+    'access arguments' => array('access adwords'),
+    'file' => 'adwords.daily.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['adwords/archive'] = array(
+    'title' => 'Archived Reports',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('adwords_archived_data'),
+    'access arguments' => array('access adwords'),
+    'file' => 'adwords.daily.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/settings/adwords'] = array(
+    'title' => 'Administer AdWords',
+    'page callback' => 'drupal_get_form',
+  	'page arguments' => array('adwords_admin_settings'),
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.admin.inc',
+    'type' => MENU_NORMAL_ITEM,  
+  );
+  return $items;
+}
+
+function adwords_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'adwords') . '/views',
+  );
+}
+
+function adwords_theme() {
+  return array(
+    'adwords_results' => array(
+      'arguments' => array('results' => NULL, 'totals' => NULL, 'client_id' => NULL),
+      'template' => 'adwords-results',
+    ),
+    'adwords_result' => array(
+      'arguments' => array('result' => NULL),
+      'template' => 'adword-result',
+    ),
+    'adwords_notes' => array(
+        'arguments' => array('notes' => NULL),
+        'template' => 'adwords-notes',
+    ),
+    'adwords_daily_traffic_configure' => array(
+    	'arguments' => array('form' => NULL),
+    ),
+  );
+}
+  
+function theme_adwords_daily_traffic_configure($form) {
+    // the variable that will hold our form HTML output
+    $output = '';
+
+    //loop through each "row" in the table array
+    foreach($form['rows'] as $id => $row) {
+
+        // if $id is not a number skip this row in the data structure
+        if (!intval($id))
+            continue;
+
+        // this array will hold the table cells for a row
+        $this_row = array();
+
+        // first, add the "name" markup
+        $this_row[] = drupal_render($row['hide']);
+        $this_row[] = drupal_render($row['column']);
+        $this_row[] = drupal_render($row['title']);
+        
+        
+        // Add the weight field to the row
+        // the Javascript to make our table drag and drop will end up hiding this cell
+        $this_row[] = drupal_render($row['weight']);
+
+        //Add the row to the array of rows
+        $table_rows[] = array('data' => $this_row, 'class'=>'draggable');
+    }
+
+    // Make sure the header count matches the column count
+    $header = array(
+    	'Hide',
+        'Column',
+    	'Name',
+        'Weight',
+        );
+
+    $table_id = 'my_items';
+
+    // this function is what brings in the javascript to make our table drag-and-droppable
+    drupal_add_tabledrag($table_id, 'order', 'sibling', 'weight');   
+
+    // over-write the 'my_items' form element with the markup generated from our table
+    $form['rows'] = array(
+        '#type' => 'markup',
+        '#value' => theme('table', $header, $table_rows, array('id' => $table_id)),
+        '#weight' => '1',
+        );
+
+    // render the form
+    // note, this approach to theming the form allows you to add other elements in the method
+    // that generates the form, and they will automatically be rendered correctly
+    $output = drupal_render($form);
+
+    return $output;
+}
+	
+function adwords_preprocess_adwords_results(&$variables) {
+  /*
+   * Get column order, show/hide and titles, first for the client
+   * otherwise use defaults (client 0)
+   */
+  $query = db_query("
+    SELECT * 
+    FROM adwords_report_columns 
+    WHERE client_id = %d
+    ORDER BY weight", $variables['client_id']);
+  if(db_affected_rows() == 0) {
+    /* Get defaults instead */
+     $query = db_query("
+      SELECT * 
+      FROM adwords_report_columns 
+      WHERE client_id = 0
+      ORDER BY weight");
+  }
+  
+  while ($row = db_fetch_object($query)) {
+    if ($row->hide != 1) {
+      /* Get header */
+      $headers[] = $row->title;
+      /* Put columns in a copy of results, in the right order */
+      foreach($variables['results'] as $key => $result) {
+        $sorted_results[$key][$row->column] = $result[$row->column];
+      }
+      $sorted_totals[$row->column] = $variables['totals'][$row->column];
+    }
+  }
+  // Get header data out
+//  foreach($variables['results'][0] as $column => $data) {
+//    $headers[] = $column;    
+//  }  
+  $variables['headers'] = $headers;
+  $variables['results'] = $sorted_results;
+  $variables['totals'] = $sorted_totals;
+}
+
+function adwords_cron() {
+	include_once 'adwords.process.inc';
+	adwords_process_emails();
+}
