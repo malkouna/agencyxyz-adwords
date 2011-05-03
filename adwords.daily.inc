@@ -349,10 +349,9 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
     $rows[$row->date]['clicks'] = number_format($row->clicks, '0');
     $total_clicks += $row->clicks;
     $rows[$row->date]['ctr'] = number_format(($row->ctr)*100, '2') . '%';
-    $total_ctr += $row->ctr;
     $rows[$row->date]['avg_cpc'] = '$' . number_format(($row->cpc)/1000000, '3');
-    $total_cpc += $row->cpc;
     $rows[$row->date]['daily_spend'] = '$' . number_format($row->cost/1000000, '0');
+    $total_daily_spend += $row->cost;
     $rows[$row->date]['avg_pos'] = number_format($row->pos, '1');
     $total_avg_pos += $row->pos;
     $rows[$row->date]['conv'] = number_format($row->conv, '0');
@@ -386,13 +385,14 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
   $totals['date'] = '';
   $totals['imps'] = number_format($total_imps, '0');
   $totals['clicks'] = number_format($total_clicks, '0');
-  $totals['ctr'] = number_format($total_ctr*100/($daynum-1), '2') . '%';
-  $totals['avg_cpc'] = '$' . number_format($total_cpc/(($daynum-1)*1000000), '3');
-  $totals['daily_spend'] = '';
-  $totals['avg_pos'] = number_format($total_avg_pos/($daynum-1), '1');
+  $totals['ctr'] = number_format($total_clicks/$total_imps*100/($daynum-1), '2') . '%';
+  $totals['avg_cpc'] = '$' . number_format($total_daily_spend/($total_clicks*1000000), '3');
+  $totals['daily_spend'] = '$' . number_format($total_daily_spend/1000000, '0');
+  $totals['avg_pos'] = number_format($total_avg_pos/$daynum, '1');
   $totals['conv'] = number_format($total_conversions, '0');
   $totals['conv_rate'] = number_format($total_conversion_rate*100/($daynum-1), '2') . '%';
   $totals['cpa'] = '$' . number_format($total_cpa/(($daynum-1)*1000000), '3');
+  $totals['target_daily_average_clicks'] = number_format($target_monthly_clicks);
   
   // Now theme the results
   $output = theme('adwords_notes', $notes);
