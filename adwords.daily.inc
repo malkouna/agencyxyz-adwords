@@ -219,11 +219,13 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
       AND date <= '%s'
       ORDER BY date", $client_id, $start_date, $end_date
   );
+  $order = 0;
   while($note = db_fetch_array($query)) {
+    $note['zebra'] = $order %2==0?'odd':'even';
     $notes[] = $note;
+    $order++;
   }
-  if(empty($notes))
-      $notes[]['note'] = 'There are no notes for this month.';
+
 
   $budget = db_fetch_object(db_query("
       SELECT * 
@@ -330,7 +332,7 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
     $columns['signups'] = '';
     $columns['pageviews'] = '';
     $columns['default_conv'] = '';
-    $columns['add_note'] = l('<span>Add Note</span>', 'adwords/daily/note/' . $client_id . '/' . $rowdate, $options);
+    $columns['add_note'] = l('<span>Add Note</span>', 'adwords/daily/note/add/' . $client_id . '/' . $rowdate, $options);
     $columns['add_note'] .= '<ul class="notetext">' . $notetext . '</ul>';
      
     //    foreach($row as $column => $value) {
@@ -481,31 +483,72 @@ function adwords_campaign_budget_submit($form, &$form_state) {
   $form_state['redirect'] = 'adwords/daily';
 }
 
-function adwords_daily_note($form_state, $client_id, $date) {
-  $form['client_id'] = array(
+function adwords_daily_note($form_state, $action, $id, $date = NULL) {
+  $form['action'] = array(
     '#type' => 'hidden',
-    '#value' => $client_id,
+    '#value' => $action,
   );
+  
+  $form['id'] = array(
+    '#type' => 'hidden',
+    '#value' => $id,
+  );
+  
   $form['date'] = array(
-    '#value' => $date,
+    '#type' => 'hidden',
+    '#value' => $date,  
   );
-  $form['note'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Note'),
-  );
-  $form['save'] = array(
-    '#type' => 'submit',
-    '#value' => t('Save Note'),
-    '#submit' => array('adwords_daily_note_submit'),
-  );
+  
+  if($action == 'delete') {
+    $form['message'] = array(
+      '#type' => 'markup',
+      '#value' => '<div class="confirm-delete">This will permanently delete this note. Press <i>Delete</i> to continue.</div>',
+    );
+    $form['delete'] = array(
+      '#type' => 'submit',
+      '#value' => 'Delete',
+    );
+  }
+  else {
+    if ($action == 'edit') {
+      /* get text of current note */
+      $default_text = db_fetch_object(db_query("SELECT note FROM adwords_daily_note WHERE nid = %d", $id))->note;
+    }
+
+    $form['date_display'] = array(
+      '#value' => $date,
+    );
+    $form['note'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Note'),
+      '#default_value' => $default_text,
+    );
+    $form['save'] = array(
+      '#type' => 'submit',
+      '#value' => t('Save Note'),
+    );
+  }  
   
   return $form;
 }
 
 function adwords_daily_note_submit($form, &$form_state) {
-	db_query("INSERT INTO adwords_daily_note VALUES (%d, '%s', '%s')", 
-	   $form['client_id']['#value'], $form['date']['#value'], $form['note']['#value']);
-	$form_state['redirect'] = 'adwords/daily/detail/' . $form['client_id']['#value'];
+  if ($form_state['values']['action'] == 'add') {
+    $client_id = $form_state['values']['id'];
+  	db_query("INSERT INTO adwords_daily_note (client_id, date, note) VALUES (%d, '%s', '%s')", 
+	     $form_state['values']['id'], $form_state['values']['date'], $form_state['values']['note']);
+  }
+  else {
+    $client_id = db_fetch_object(db_query("SELECT client_id FROM adwords_daily_note WHERE nid = %d", $form_state['values']['id']))->client_id;
+    if ($form_state['values']['action'] == 'delete') {
+      db_query("DELETE FROM adwords_daily_note WHERE nid = %d", $form_state['values']['id']);
+    }
+    else if ($form_state['values']['action'] == 'edit') {
+      db_query("UPDATE adwords_daily_note SET note = '%s' WHERE nid = %d", $form_state['values']['note'], $form_state['values']['id']); 
+    }
+  }
+
+  $form_state['redirect'] = 'adwords/daily/detail/' . $client_id;
 }
 
 function adwords_archived_data($form_state) {

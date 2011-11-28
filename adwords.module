@@ -111,8 +111,8 @@ function adwords_menu() {
     'type' => MENU_CALLBACK,
   );
 
-  $items['adwords/daily/note/%/%'] = array(
-    'title' => 'Add note to report',
+  $items['adwords/daily/note/edit/%'] = array(
+    'title' => 'Edit Note',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('adwords_daily_note', 3, 4),
     'access arguments' => array('access adwords'),
@@ -120,10 +120,19 @@ function adwords_menu() {
     'type' => MENU_CALLBACK,
   );
 
-  $items['adwords/daily/note/%/%'] = array(
-    'title' => 'Add note to report',
+  $items['adwords/daily/note/delete/%'] = array(
+    'title' => 'Delete Note',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('adwords_daily_note', 3, 4),
+    'access arguments' => array('access adwords'),
+    'file' => 'adwords.daily.inc',
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['adwords/daily/note/add/%/%'] = array(
+    'title' => 'Add note to report',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('adwords_daily_note', 3, 4, 5),
     'access arguments' => array('access adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_CALLBACK,

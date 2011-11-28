@@ -51,7 +51,7 @@ try {
   // Get the CampaignTargetService.
   $campaignTargetService = $user->GetCampaignTargetService('v201008');
 
-  $campaignId = (float) 'INSERT_CAMPAIGN_ID_HERE';
+  $campaignId = (float) '85610263';
 
   // Create language targets.
   $langTargetList = new LanguageTargetList();

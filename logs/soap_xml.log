@@ -1841,3 +1841,328 @@ Server: GSE
   </soap:Body>
 </soap:Envelope>
 
+[May 18 2011 05:46:52.000000 - INFO] POST /api/adwords/cm/v201008/CampaignService HTTP/1.1
+Host: adwords-sandbox.google.com
+Connection: Keep-Alive
+User-Agent: PHP-SOAP/5.3.5, gzip
+Accept-Encoding: gzip, deflate
+Content-Encoding: gzip
+Content-Type: text/xml; charset=utf-8
+SOAPAction: ""
+Content-Length: 528
+
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SOAP-ENV:Header>
+    <ns1:RequestHeader xsi:type="ns1:RequestHeader">
+      <ns1:authToken>*****</ns1:authToken>
+      <ns1:developerToken>malkouna@gmail.com++AUD</ns1:developerToken>
+      <ns1:userAgent>AwApi-PHP-2.4.1-agencyxyz</ns1:userAgent>
+    </ns1:RequestHeader>
+  </SOAP-ENV:Header>
+  <SOAP-ENV:Body>
+    <ns1:get>
+      <ns1:selector/>
+    </ns1:get>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+
+
+HTTP/1.1 200 OK
+Content-Type: text/xml; charset=UTF-8
+SOAPAction: ""
+Content-Encoding: gzip
+Transfer-Encoding: chunked
+Date: Wed, 18 May 2011 03:46:58 GMT
+Expires: Wed, 18 May 2011 03:46:58 GMT
+Cache-Control: private, max-age=0
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-XSS-Protection: 1; mode=block
+Server: GSE
+
+<?xml version="1.0"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Header>
+    <ResponseHeader xmlns="https://adwords.google.com/api/adwords/cm/v201008">
+      <requestId>355d44a11a9fa30c30e3150edfe68fff</requestId>
+      <operations>1</operations>
+      <responseTime>1984</responseTime>
+      <units>1</units>
+    </ResponseHeader>
+  </soap:Header>
+  <soap:Body>
+    <getResponse xmlns="https://adwords.google.com/api/adwords/cm/v201008">
+      <rval>
+        <totalNumEntries>0</totalNumEntries>
+        <Page.Type>CampaignPage</Page.Type>
+        <totalBudget>
+          <period>DAILY</period>
+          <amount>
+            <ComparableValue.Type>Money</ComparableValue.Type>
+            <microAmount>0</microAmount>
+          </amount>
+          <deliveryMethod>STANDARD</deliveryMethod>
+        </totalBudget>
+      </rval>
+    </getResponse>
+  </soap:Body>
+</soap:Envelope>
+
+[May 18 2011 09:19:34.000000 - INFO] POST /api/adwords/cm/v201008/CampaignTargetService HTTP/1.1
+Host: adwords-sandbox.google.com
+Connection: Keep-Alive
+User-Agent: PHP-SOAP/5.3.5, gzip
+Accept-Encoding: gzip, deflate
+Content-Encoding: gzip
+Content-Type: text/xml; charset=utf-8
+SOAPAction: ""
+Content-Length: 748
+
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SOAP-ENV:Header>
+    <ns1:RequestHeader xsi:type="ns1:RequestHeader">
+      <ns1:authToken>*****</ns1:authToken>
+      <ns1:developerToken>malkouna@gmail.com++AUD</ns1:developerToken>
+      <ns1:userAgent>AwApi-PHP-2.4.1-agencyxyz</ns1:userAgent>
+    </ns1:RequestHeader>
+  </SOAP-ENV:Header>
+  <SOAP-ENV:Body>
+    <ns1:mutate>
+      <ns1:operations>
+        <ns1:operator>SET</ns1:operator>
+        <ns1:operand xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xsi:type="ns1:LanguageTargetList">
+          <ns1:campaignId>85610263</ns1:campaignId>
+          <ns1:targets>
+            <ns1:languageCode>fr</ns1:languageCode>
+          </ns1:targets>
+          <ns1:targets>
+            <ns1:languageCode>ja</ns1:languageCode>
+          </ns1:targets>
+        </ns1:operand>
+      </ns1:operations>
+      <ns1:operations>
+        <ns1:operator>SET</ns1:operator>
+        <ns1:operand xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xsi:type="ns1:GeoTargetList">
+          <ns1:campaignId>85610263</ns1:campaignId>
+          <ns1:targets xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xsi:type="ns1:CountryTarget">
+            <ns1:countryCode>US</ns1:countryCode>
+          </ns1:targets>
+          <ns1:targets xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xsi:type="ns1:CountryTarget">
+            <ns1:countryCode>JP</ns1:countryCode>
+          </ns1:targets>
+        </ns1:operand>
+      </ns1:operations>
+      <ns1:operations>
+        <ns1:operator>SET</ns1:operator>
+        <ns1:operand xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xsi:type="ns1:NetworkTargetList">
+          <ns1:campaignId>85610263</ns1:campaignId>
+          <ns1:targets>
+            <ns1:networkCoverageType>GOOGLE_SEARCH</ns1:networkCoverageType>
+          </ns1:targets>
+          <ns1:targets>
+            <ns1:networkCoverageType>SEARCH_NETWORK</ns1:networkCoverageType>
+          </ns1:targets>
+        </ns1:operand>
+      </ns1:operations>
+    </ns1:mutate>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+
+
+HTTP/1.1 500 Internal Server Error
+Content-Type: text/xml; charset=UTF-8
+Content-Encoding: gzip
+Transfer-Encoding: chunked
+Date: Wed, 18 May 2011 07:19:39 GMT
+Expires: Wed, 18 May 2011 07:19:39 GMT
+Cache-Control: private, max-age=0
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-XSS-Protection: 1; mode=block
+Server: GSE
+
+<?xml version="1.0"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Header>
+    <ResponseHeader xmlns="https://adwords.google.com/api/adwords/cm/v201008">
+      <requestId>8c57d6ec4e5495fe63f5678d31668a79</requestId>
+      <operations>1</operations>
+      <responseTime>262</responseTime>
+      <units>1</units>
+    </ResponseHeader>
+  </soap:Header>
+  <soap:Body>
+    <soap:Fault>
+      <faultcode>soap:Server</faultcode>
+      <faultstring>[EntityNotFound.INVALID_ID @ operations[0].operand.campaignId; trigger:'CampaignId: 85610263']</faultstring>
+      <detail>
+        <ApiExceptionFault xmlns="https://adwords.google.com/api/adwords/cm/v201008">
+          <message>[EntityNotFound.INVALID_ID @ operations[0].operand.campaignId; trigger:'CampaignId: 85610263']</message>
+          <ApplicationException.Type>ApiException</ApplicationException.Type>
+          <errors xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="EntityNotFound">
+            <fieldPath>operations[0].operand.campaignId</fieldPath>
+            <trigger>CampaignId: 85610263</trigger>
+            <errorString>EntityNotFound.INVALID_ID</errorString>
+            <ApiError.Type>EntityNotFound</ApiError.Type>
+            <reason>INVALID_ID</reason>
+          </errors>
+        </ApiExceptionFault>
+      </detail>
+    </soap:Fault>
+  </soap:Body>
+</soap:Envelope>
+
+[May 18 2011 09:20:41.000000 - INFO] POST /api/adwords/cm/v201008/CampaignService HTTP/1.1
+Host: adwords-sandbox.google.com
+Connection: Keep-Alive
+User-Agent: PHP-SOAP/5.3.5, gzip
+Accept-Encoding: gzip, deflate
+Content-Encoding: gzip
+Content-Type: text/xml; charset=utf-8
+SOAPAction: ""
+Content-Length: 529
+
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SOAP-ENV:Header>
+    <ns1:RequestHeader xsi:type="ns1:RequestHeader">
+      <ns1:authToken>*****</ns1:authToken>
+      <ns1:developerToken>malkouna@gmail.com++AUD</ns1:developerToken>
+      <ns1:userAgent>AwApi-PHP-2.4.1-agencyxyz</ns1:userAgent>
+    </ns1:RequestHeader>
+  </SOAP-ENV:Header>
+  <SOAP-ENV:Body>
+    <ns1:get>
+      <ns1:selector/>
+    </ns1:get>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+
+
+HTTP/1.1 200 OK
+Content-Type: text/xml; charset=UTF-8
+SOAPAction: ""
+Content-Encoding: gzip
+Transfer-Encoding: chunked
+Date: Wed, 18 May 2011 07:20:47 GMT
+Expires: Wed, 18 May 2011 07:20:47 GMT
+Cache-Control: private, max-age=0
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-XSS-Protection: 1; mode=block
+Server: GSE
+
+<?xml version="1.0"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Header>
+    <ResponseHeader xmlns="https://adwords.google.com/api/adwords/cm/v201008">
+      <requestId>2460db1017930c939b3c48ac319c74ff</requestId>
+      <operations>1</operations>
+      <responseTime>124</responseTime>
+      <units>1</units>
+    </ResponseHeader>
+  </soap:Header>
+  <soap:Body>
+    <getResponse xmlns="https://adwords.google.com/api/adwords/cm/v201008">
+      <rval>
+        <totalNumEntries>0</totalNumEntries>
+        <Page.Type>CampaignPage</Page.Type>
+        <totalBudget>
+          <period>DAILY</period>
+          <amount>
+            <ComparableValue.Type>Money</ComparableValue.Type>
+            <microAmount>0</microAmount>
+          </amount>
+          <deliveryMethod>STANDARD</deliveryMethod>
+        </totalBudget>
+      </rval>
+    </getResponse>
+  </soap:Body>
+</soap:Envelope>
+
+[May 18 2011 09:21:09.000000 - INFO] POST /api/adwords/cm/v201008/CampaignService HTTP/1.1
+Host: adwords-sandbox.google.com
+Connection: Keep-Alive
+User-Agent: PHP-SOAP/5.3.5, gzip
+Accept-Encoding: gzip, deflate
+Content-Encoding: gzip
+Content-Type: text/xml; charset=utf-8
+SOAPAction: ""
+Content-Length: 709
+
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SOAP-ENV:Header>
+    <ns1:RequestHeader xsi:type="ns1:RequestHeader">
+      <ns1:authToken>*****</ns1:authToken>
+      <ns1:developerToken>malkouna@gmail.com++AUD</ns1:developerToken>
+      <ns1:userAgent>AwApi-PHP-2.4.1-agencyxyz</ns1:userAgent>
+    </ns1:RequestHeader>
+  </SOAP-ENV:Header>
+  <SOAP-ENV:Body>
+    <ns1:mutate>
+      <ns1:operations>
+        <ns1:operator>ADD</ns1:operator>
+        <ns1:operand>
+          <ns1:name>Interplanetary Cruise #1305703268</ns1:name>
+          <ns1:status>PAUSED</ns1:status>
+          <ns1:budget>
+            <ns1:period>DAILY</ns1:period>
+            <ns1:amount>
+              <ns1:microAmount>50000000</ns1:microAmount>
+            </ns1:amount>
+            <ns1:deliveryMethod>STANDARD</ns1:deliveryMethod>
+          </ns1:budget>
+          <ns1:biddingStrategy xmlns:ns1="https://adwords.google.com/api/adwords/cm/v201008" xsi:type="ns1:ManualCPC"/>
+        </ns1:operand>
+      </ns1:operations>
+    </ns1:mutate>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+
+
+HTTP/1.1 500 Internal Server Error
+Content-Type: text/xml; charset=UTF-8
+Content-Encoding: gzip
+Transfer-Encoding: chunked
+Date: Wed, 18 May 2011 07:21:14 GMT
+Expires: Wed, 18 May 2011 07:21:14 GMT
+Cache-Control: private, max-age=0
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-XSS-Protection: 1; mode=block
+Server: GSE
+
+<?xml version="1.0"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Header>
+    <ResponseHeader xmlns="https://adwords.google.com/api/adwords/cm/v201008">
+      <requestId>9e5f3e14fb03a30aff8207c03f50415c</requestId>
+      <operations>1</operations>
+      <responseTime>78</responseTime>
+      <units>1</units>
+    </ResponseHeader>
+  </soap:Header>
+  <soap:Body>
+    <soap:Fault>
+      <faultcode>soap:Server</faultcode>
+      <faultstring>[OperationAccessDenied.ADD_OPERATION_NOT_PERMITTED @ operations[0]]</faultstring>
+      <detail>
+        <ApiExceptionFault xmlns="https://adwords.google.com/api/adwords/cm/v201008">
+          <message>[OperationAccessDenied.ADD_OPERATION_NOT_PERMITTED @ operations[0]]</message>
+          <ApplicationException.Type>ApiException</ApplicationException.Type>
+          <errors xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="OperationAccessDenied">
+            <fieldPath>operations[0]</fieldPath>
+            <trigger/>
+            <errorString>OperationAccessDenied.ADD_OPERATION_NOT_PERMITTED</errorString>
+            <ApiError.Type>OperationAccessDenied</ApiError.Type>
+            <reason>ADD_OPERATION_NOT_PERMITTED</reason>
+          </errors>
+        </ApiExceptionFault>
+      </detail>
+    </soap:Fault>
+  </soap:Body>
+</soap:Envelope>
+

@@ -3,16 +3,29 @@
  * TODO: make this configurable on admin page.
  */
 $hosts = array(
+//array(
+//    'id' => 1, 
+//    'url' => 'http://www.alphamagazine.com.au', 
+//    'pages' => 0, 
+//    'client_email' => 'alpha@agencyxyz.com',
+////'client_email' => 'client_1+malkouna@gmail.com',
+//    'number_of_keywords' => 50,
+//    'article_matching_pattern' => '/[a-zA-z+]+,([0-9]+)$/',
+//    'article_css_selector' => '.article-copy', // This is the div that is used to target content
+//),
 array(
-    'id' => 1, 
-    'url' => 'http://www.alphamagazine.com.au', 
-    'pages' => 0, 
-    'client_email' => 'alpha@agencyxyz.com',
+    'id' => 2, 
+    'url' => 'http://www.bodyandsoul.com.au', 
+    'pages' => 50, 
+    'client_email' => 'bodysoul@agencyxyz.com',
 //'client_email' => 'client_1+malkouna@gmail.com',
     'number_of_keywords' => 50,
     'article_matching_pattern' => '/[a-zA-z+]+,([0-9]+)$/',
-    'article_css_selector' => '.article-copy', // This is the div that is used to target content
-),
+    'article_css_selector' => '/html/head/meta[@name="description"]/@content', // This is the div that is used to target content
+    'daily_budget' => 50.00,
+    'max_bid' => 0.10,
+    'force_update' => 1,
+  ),
 );
 
 define('HOSTS', serialize($hosts));
@@ -43,7 +56,7 @@ function crawler_crawl_all() {
 	}
 }
 
-function crawler_crawl_alpha_only() {
+function crawler_crawl_first_only() {
 	global $pages;
 
 	$hosts = unserialize(HOSTS);
@@ -74,6 +87,11 @@ function crawler_crawl_alpha_only() {
 	// Following query will force rerawl of pages
 	db_query("UPDATE {adwords_crawler_links} SET crawled = 0 WHERE host_id = %d", $host['id']);
 	
+	/* if force_update flag set, then set processed to 0 so that it goes through adwords again */
+	if ($host['force_update']) {
+	  db_query("UPDATE {adwords_crawler_links} SET processed = 0 WHERE host_id = %d", $host['id']);
+	}
+	
 	/*
 	* write first url to start crawl
 	*/
@@ -100,10 +118,10 @@ function crawler_crawl_alpha_only() {
 	$batch = array(
     'title' => t('Crawling...'),
     'operations' => array(
-	array('crawler_crawl_url', array($host)),
-	array('crawler_get_keywords', array($host)),
-	array('crawler_update_adwords', array($host)),
-	),
+    	array('crawler_crawl_url', array($host)),
+    	array('crawler_get_keywords', array($host)),
+    	array('crawler_update_adwords', array($host)),
+  	),
     'finished' => 'crawler_crawl_only_finished',
     'pages'
     );
@@ -148,7 +166,7 @@ function crawler_crawl_host($host, &$context) {
 	crawler_crawl_url($url, $base_url, $host);
 }
 
-function crawler_get_campaign_by_name($user, $name) {
+function crawler_get_campaign_by_name($user, $name, $force_update = 0) {
 	try {
 		// Get the CampaignService.
 		$campaignService = $user->GetCampaignService('v201008');
@@ -161,7 +179,7 @@ function crawler_get_campaign_by_name($user, $name) {
 		if (isset($page->entries)) {
 			foreach ($page->entries as $campaign) {
 				if($campaign->name == $name) {
-					if ($campaign->status != 'PAUSED') {
+					if ($force_update) {
 						$update_campaign = new Campaign;  // Have to use new campaign object so that other parameters don't get set.
 						$update_campaign->id = $campaign->id;
 						$update_campaign->status = 'PAUSED';
@@ -177,6 +195,26 @@ function crawler_get_campaign_by_name($user, $name) {
 						if(!isset($result->value)) {
 							watchdog('adwords_crawler', t('Unable to unpause campaign @campaign', array('@campaign' => $campaign->name)), WATCHDOG_ERROR);
 						}
+						
+						/* next reset target country to AU */
+		        $campaignTargetService = $user->GetCampaignTargetService('v201008');
+
+            // Create geo targets.
+            $geoTargetList = new GeoTargetList();
+            $geoTargetList->campaignId = $campaign->id;
+            $geoTargetList->targets = array(new CountryTarget('AU'));
+            
+            $geoTargetOperation = new CampaignTargetOperation();
+            $geoTargetOperation->operand = $geoTargetList;
+            $geoTargetOperation->operator = 'SET';
+
+            $operations = array($geoTargetOperation);
+
+            // Set campaign targets.
+            $target_result = $campaignTargetService->mutate($operations);
+            if(!isset($target_result->value)) {
+              watchdog('adwords_cralwer', t('Could not set geo targets for campaign @campaign', array('@campaign' => $campaign->name)));
+            }
 					}
 					// If I find a campaign with this name return make sure it's paused and return the id
 					return $campaign->id;
@@ -191,7 +229,7 @@ function crawler_get_campaign_by_name($user, $name) {
 	return null;
 }
 
-function crawler_get_adgroup_by_name($user, $name, $campaign_id) {
+function crawler_get_adgroup_by_name($user, $name, $campaign_id, $max_bid = .1, $force_update = false) {
 	try {
 		// Get the AdGroupService.
 		$adGroupService = $user->GetAdGroupService('v201008');
@@ -205,6 +243,35 @@ function crawler_get_adgroup_by_name($user, $name, $campaign_id) {
 		if (isset($page->entries)) {
 			foreach ($page->entries as $adGroup) {
 				if($adGroup->name == $name) {
+				  if($force_update) {
+			      // Create ad group.
+            $adGroupUpdate = new AdGroup();
+            $adGroupUpdate->name = $name;
+            $adGroupUpdate->status = 'PAUSED';
+            $adGroupUpdate->campaignId = $campaign_id; // ID of just created campaign
+
+            // Create ad group bid.
+            $adGroupBids = new ManualCPCAdGroupBids();
+            $adGroupBids->keywordMaxCpc = new Bid(new Money($max_bid * 1000000)); // 10c
+            $adGroup->bids = $adGroupBids;
+
+            // Create operations.
+            $operation = new AdGroupOperation();
+            $operation->operand = $adGroup;
+            $operation->operator = 'SET';
+
+            $operations = array($operation);
+
+            // Update ad group.
+            $result = $adGroupService->mutate($operations);
+        
+            if(isset($result->value)) {
+              foreach ($result->value as $adGroup) {
+                watchdog('adwords_crawler', t('AdGroup @adgroup updated', array('@adgroup' => $adGroup->name)));
+                return $adGroup->id;
+              }
+			      }
+				  }
 					// If I find a campaign with this name return the id
 					return $adGroup->id;
 				}
@@ -217,11 +284,11 @@ function crawler_get_adgroup_by_name($user, $name, $campaign_id) {
 	return null;
 }
 
-function crawler_add_adgroup($user, $name, $campaign_id) {
+function crawler_add_adgroup($user, $name, $campaign_id, $max_bid = .1, $force_update = false) {
 	/*
 	 * See if we have a adgroup with this name, if so return that id
 	 */
-	if($adgroup_id = crawler_get_adgroup_by_name($user, $name, $campaign_id)) {
+	if($adgroup_id = crawler_get_adgroup_by_name($user, $name, $campaign_id, $max_bid, $force_update)) {
 		return $adgroup_id;
 	}
 	/* otherwise add a new adgroup */
@@ -237,7 +304,7 @@ function crawler_add_adgroup($user, $name, $campaign_id) {
 
 		// Create ad group bid.
 		$adGroupBids = new ManualCPCAdGroupBids();
-		$adGroupBids->keywordMaxCpc = new Bid(new Money(1000000));
+		$adGroupBids->keywordMaxCpc = new Bid(new Money($max_bid * 1000000)); // 10c
 		$adGroup->bids = $adGroupBids;
 
 		// Create operations.
@@ -266,12 +333,12 @@ function crawler_add_adgroup($user, $name, $campaign_id) {
 	return null;
 }
 
-function crawler_add_campaign($user, $title) {
+function crawler_add_campaign($user, $title, $force_update = false) {
 	$campaign_name = 'Auto Article Campaign - ' . $title;
 	/*
 	 * See if we have a campaign with this name, if so return that id
 	 */
-	if($campaign_id = crawler_get_campaign_by_name($user, $campaign_name)) {
+	if($campaign_id = crawler_get_campaign_by_name($user, $campaign_name, $force_update)) {
 		return $campaign_id;
 	}
 
@@ -314,9 +381,13 @@ function crawler_add_campaign($user, $title) {
 
 				// Create geo targets.
 				$geoTargetList = new GeoTargetList();
-				$geoTargetList->campaignId = $campaignId;
+				$geoTargetList->campaignId = $campaign->id;
 				$geoTargetList->targets = array(new CountryTarget('AU'));
-
+        
+				$geoTargetOperation = new CampaignTargetOperation();
+        $geoTargetOperation->operand = $geoTargetList;
+        $geoTargetOperation->operator = 'SET';
+				
   		  $operations = array($geoTargetOperation);
 
         // Set campaign targets.
@@ -348,6 +419,7 @@ function crawler_update_adwords($host, &$context) {
     FROM {adwords_crawler_links} 
     WHERE host_id = %d
     AND article_id IS NOT NULL
+    AND crawled = 1
     AND processed = 0", $host['id']);
 
 	if($link_result = db_fetch_object($link_query)) {
@@ -377,12 +449,12 @@ function crawler_update_adwords($host, &$context) {
 	//  drupal_write_record('adwords_crawler_links', $link_record, array('id'));
 
 	// Add the campaign
-	if(!$campaign_id = crawler_add_campaign($user, $link_result->breadcrumb)) {
-		continue; // If there was a problem with the campaign add then do next link
+	if(!$campaign_id = crawler_add_campaign($user, $link_result->breadcrumb, $host['force_update'])) {
+		return; // If there was a problem with the campaign add then do next link
 	}
 	$adgroup_name = $link_result->article_id . ' - ' . $link_result->title;
-	if(!$adgroup_id = crawler_add_adgroup($user, $adgroup_name, $campaign_id)) {
-		continue; // If there was a problem with the adgroup add then do next link
+	if(!$adgroup_id = crawler_add_adgroup($user, $adgroup_name, $campaign_id, $host['max_bid'], $host['force_update'])) {
+		return; // If there was a problem with the adgroup add then do next link
 	}
 	try {
 		// Now have adgroup add all the keywords for this url
@@ -512,6 +584,7 @@ function crawler_crawl_url($host, &$context) {
     SELECT COUNT(*) AS pages 
     FROM {adwords_crawler_links} 
     WHERE host_id = %d
+    AND crawled = 1
     AND article_id IS NOT NULL", $host['id']));
 
 	if($pages->pages >= $host['pages'] && $host['pages'] != 0) { // pages equals zero equals no limit.
@@ -545,7 +618,8 @@ function crawler_crawl_url($host, &$context) {
 	 */
 	if(preg_match($host['article_matching_pattern'], $url, $matches)) {
 		// Try and get something for a description
-		$content = str_replace(array("\n", "\t"), "", htmlqp($url, $host['article_css_selector'])->text());
+		// works: $meta = $qp->xpath('/html/head/meta[@name="description"]/@content')->text();
+		$content = str_replace(array("\n", "\t"), "", htmlqp($url)->xpath($host['article_css_selector'])->text());
 		// Got here, so must be an article
 		$article_id = $matches[1];
 		$breadcrumbs = explode("/", $url);
@@ -690,6 +764,7 @@ function crawler_get_keywords($host, &$context) {
     FROM {adwords_crawler_links} 
     WHERE host_id = %d
     AND article_id IS NOT NULL
+    AND crawled = 1
     AND keywords_generated = 0", $host['id']);
 	/*
 	 * Connect to the adwords server
@@ -837,11 +912,17 @@ function crawler_admin_settings() {
 function crawler_admin_hosts($form_state) {
 
 
-	$form['crawl_alpha_only'] = array(
+	$form['crawl_first_only'] = array(
     '#type' => 'submit',
-    '#value' => 'Crawl Alpha',
-    '#submit' => array('crawler_crawl_alpha_only'),
+    '#value' => 'Crawl First Host',
+    '#submit' => array('crawler_crawl_first_only'),
 	);
+	
+	 $form['crawl_all'] = array(
+    '#type' => 'submit',
+    '#value' => 'Crawl All Hosts',
+    '#submit' => array('crawler_crawl_all'),
+  );
 
 	//  $form['crawl_all'] = array(
 	//    '#type' => 'submit',
