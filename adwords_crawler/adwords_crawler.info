@@ -1,3 +1,0 @@
-name = AdWords Crawler
-description = Crawl pages and create AdWords campaigns automatically based on keywords.
-core = 6.x
