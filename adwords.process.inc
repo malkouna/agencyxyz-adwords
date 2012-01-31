@@ -67,7 +67,7 @@ function adwords_process_emails() {
           db_query($insert);
         }
         // var_dump($xml);
-        drupal_set_message(t("File @file processed", array('@file', $part->parameters[0]->value)));
+        drupal_set_message(t("File @file processed", array('@file' => $part->parameters[0]->value)));
       }
     }
   }
