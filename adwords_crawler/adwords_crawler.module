@@ -1,69 +1,22 @@
 <?php
-/*
- * TODO: make this configurable on admin page.
- */
-$hosts = array(
-//array(
-//    'id' => 1, 
-//    'url' => 'http://www.alphamagazine.com.au', 
-//    'pages' => 0, 
-//    'client_email' => 'alpha@agencyxyz.com',
-////'client_email' => 'client_1+malkouna@gmail.com',
-//    'number_of_keywords' => 50,
-//    'article_matching_pattern' => '/[a-zA-z+]+,([0-9]+)$/',
-//    'article_css_selector' => '.article-copy', // This is the div that is used to target content
-//),
-array(
-    'id' => 2, 
-    'url' => 'http://www.bodyandsoul.com.au', 
-    'pages' => 50, 
-    'client_email' => 'bodysoul@agencyxyz.com',
-//'client_email' => 'client_1+malkouna@gmail.com',
-    'number_of_keywords' => 50,
-    'article_matching_pattern' => '/[a-zA-z+]+,([0-9]+)$/',
-    'article_css_selector' => '/html/head/meta[@name="description"]/@content', // This is the div that is used to target content
-    'daily_budget' => 50.00,
-    'max_bid' => 0.10,
-    'force_update' => 1,
-  ),
-);
 
-define('HOSTS', serialize($hosts));
-
-//function crawler_cron() {
-//  crawler_all();
+//function adwords_crawler_cron() {
+//  adwords_crawler_all();
 //}
 
 $pages = 0;
 
-function crawler_crawl_all() {
-	global $posts;
-
-	$hosts = unserialize(HOSTS);
-	foreach($hosts as $host) {
-		/*
-		 * Get all links for pages in current url
-		 */
-		crawler_crawl_host($host);
-		/*
-		 * Get and save keyword suggestions for this host
-		 */
-		crawler_get_keywords($host);
-		/*
-		 * now create an adgroup (limit 1000 per campaign) for each keyword suggestion
-		 */
-		crawler_update_adwords($host);
-	}
+function adwords_crawler_crawl_all($form, $form_state) {
+  drupal_set_message('Submit Done');
+  
+  foreach($form_state['values']['hosts'] as $host) {
+    adwords_crawler_crawl_host($host);
+  }
 }
 
-function crawler_crawl_first_only() {
+function adwords_crawler_crawl_host($host) {
 	global $pages;
 
-	$hosts = unserialize(HOSTS);
-	/*
-	 * TODO: Only does the first host atm.
-	 */
-	$host = $hosts[0];
 	$url = $host['url'];
 	if (!preg_match("[^https?://]", $url)) {
 		drupal_set_message('Invalid url in settings: ' . $url, 'error');
@@ -79,17 +32,33 @@ function crawler_crawl_first_only() {
 		$base_url .= '/';
 	}
 	 
+	/* What do we want to do */
+	$operations = array();
+
+
+	/* Following query will force rerawl of pages. Need to recrawl every time in case pages have changed,
+	 * and to discover new links.
+	 */ 
+	if(!empty($host['crawl']['crawl'])) {
+    db_query("UPDATE {adwords_crawler_links} SET crawled = 0 WHERE host_id = %d", $host['id']);
+	}
 	/*
-	 * Clear database tables
+	 * Clear database tables if asked to
 	 */
-	//db_query("DELETE FROM {adwords_crawler_links} WHERE host_id = %d", $host['id']);
-	//db_query("DELETE FROM {adwords_crawler_keywords} WHERE host_id = %d", $host['id']);
-	// Following query will force rerawl of pages
-	db_query("UPDATE {adwords_crawler_links} SET crawled = 0 WHERE host_id = %d", $host['id']);
-	
-	/* if force_update flag set, then set processed to 0 so that it goes through adwords again */
-	if ($host['force_update']) {
-	  db_query("UPDATE {adwords_crawler_links} SET processed = 0 WHERE host_id = %d", $host['id']);
+  if ($host['force'] == 1) {
+	  if(!empty($host['crawl']['crawl'])) {
+	  	/* Only delete crawls if we've been asked to and we're doing a crawl */
+	    db_query("DELETE FROM {adwords_crawler_links} WHERE host_id = %d", $host['id']);
+	  }
+	  if (!empty($host['crawl']['keywords'])) {
+	  	/* Only reset keyword flag if we've been asked to and we're doing a crawl */
+	    db_query("UPDATE {adwords_crawler_links} SET keywords_generated = 0 WHERE host_id = %d", $host['id']);
+	    db_query("DELETE FROM {adwords_crawler_keywords} WHERE host_id = %d", $host['id']);
+	  }
+		/* if force_update flag set, then set processed to 0 so that it goes through adwords again */
+	  if (!empty($host['crawl']['adwords'])) {
+	    db_query("UPDATE {adwords_crawler_links} SET processed = 0 WHERE host_id = %d", $host['id']);
+	  }
 	}
 	
 	/*
@@ -99,11 +68,7 @@ function crawler_crawl_first_only() {
     SELECT *
     FROM {adwords_crawler_links} 
     WHERE host_id = %d AND url = '%s'", $host['id'], $url));
-	if($recrawl) {
-		$recrawl->crawled = 0;
-		drupal_write_record('adwords_crawler_links', $recrawl, array('id'));
-	}
-	else {
+	if(!$recrawl) {
 		$link_record = new stdClass();
 		//$link_record->id = null;
 		$link_record->url = $url;
@@ -114,21 +79,31 @@ function crawler_crawl_first_only() {
 	}
 
 	$pages = 1;
+	
 
-	$batch = array(
-    'title' => t('Crawling...'),
-    'operations' => array(
-    	array('crawler_crawl_url', array($host)),
-    	array('crawler_get_keywords', array($host)),
-    	array('crawler_update_adwords', array($host)),
-  	),
-    'finished' => 'crawler_crawl_only_finished',
-    'pages'
+	/* Do we want to crawl URLs */
+	if (!empty($host['crawl']['crawl'])) 
+	  $operations = array_merge($operations, array(array('adwords_crawler_crawl_url', array($host))));
+	/* Generate keywords */
+	if (!empty($host['crawl']['keywords'])) 
+	  $operations = array_merge($operations, array(array('adwords_crawler_get_keywords', array($host))));
+  /* Update AdWords */
+	if (!empty($host['crawl']['adwords'])) 
+	  $operations = array_merge($operations, array(array('adwords_crawler_update_adwords', array($host))));
+
+	if (!empty($operations)) {
+  	$batch = array(
+      'title' => t('Crawling !host...', array('!host' => $host['url'])),
+      'operations' => $operations,
+      'finished' => 'adwords_crawler_crawl_finished',
+      'pages',
     );
+  
     batch_set($batch);
+	}
 }
 
-function crawler_crawl_only_finished($success, $results, $operations) {
+function adwords_crawler_crawl_finished($success, $results, $operations) {
 	if ($success) {
 		$message = 'Crawl completed';
 	}
@@ -138,35 +113,99 @@ function crawler_crawl_only_finished($success, $results, $operations) {
 	drupal_set_message($message);
 }
 
-function crawler_crawl_host($host, &$context) {
-	global $pages;
-
-	/*
-	 * Seeding function, that will check the base URL and
-	 * save for all relative urls
-	 */
-	$url = $host['url'];
-	if (!preg_match("[^https?://]", $url)) {
-		drupal_set_message('Invalid url in settings: ' . $url, 'error');
-		return;
-	}
-	/* Make sure urls are in lower case */
-	$url = strtolower($url);
-	$base_url = $url;
-	/*
-	 * If entered url doesn't have a trailing slash then add one
-	 */
-	if (!preg_match("[/$]", $base_url)) {
-		$base_url .= '/';
-	}
-
-	/* reset counter here for each crawl */
-	$pages = 1;
-	 
-	crawler_crawl_url($url, $base_url, $host);
+function adwords_crawler_purge_campaigns($form, $form_state) {
+  foreach($form_state['values']['hosts'] as $host) {
+    /*
+     * If no host prefix specified just log and return
+     */
+    if (empty($host['prefix'])) {
+      watchdog('adwords_crawler', t('No campaign name prefix provided for host @host', array('@host' => $host['url'])));
+      continue;
+    }
+  	/*
+  	 * Connect to the adwords server using a client ID in this instance
+  	 */
+  	$user = adwords_crawler_adwords_login($host['client_email']);
+  	if (!$user) {
+  		watchdog('adwords_crawler', t('Cannot log into AdWords server'), NULL, WATCHDOG_ERROR);
+  		return;
+  	}
+	
+  	/*
+  	 * Get all campaigns for this client, delete if they start with the 
+  	 * same prefix.
+  	 */
+  	
+  	try {
+  		// Get the CampaignService.
+  		$campaignService = $user->GetCampaignService('v201008');
+  		// Get the AdGroupService.
+  		$adGroupService = $user->GetAdGroupService('v201008');
+  
+  		// Create selector.
+  		$selector = new CampaignSelector();
+  
+  		// Get all campaigns.
+  		$page = $campaignService->get($selector);
+  		if (isset($page->entries)) {
+  			foreach ($page->entries as $campaign) {
+  			  /* need to use !== operator as strpos will return 0 when it does match 
+  			   * (at start of string 
+  			   */
+  				if(strpos($campaign->name, $host['prefix']) !== false) {
+  				  /* Delete any adgroups for this campaign */
+  				  $adgroup_selector = new AdGroupSelector();
+  				  $adgroup_selector->campaignIds = array($campaign->id);
+  				  
+  				  $adgroup_page = $adGroupService->get($adgroup_selector);
+  				  
+  				  if (isset($adgroup_page->entries)) {
+  				    foreach($adgroup_page->entries as $adgroup) {
+  				      $deleted_adgroup = new AdGroup();
+  				      $deleted_adgroup->id = $adgroup->id;
+  				      $deleted_adgroup->status = 'DELETED';
+  				      
+  				      $adgroup_operation = new AdGroupOperation();
+  			        $adgroup_operation->operand = $deleted_adgroup;
+                $adgroup_operation->operator = 'SET';
+              
+                $adgroup_operations = array($adgroup_operation);
+              
+                // Delete ad group.
+                $adgroup_result = $adGroupService->mutate($adgroup_operations);
+      					if(!isset($result->value)) {
+  						    watchdog('adwords_crawler', t('Unable to delete adgoupd @adgroup', array('@adgroup' => $adgroup->name)), WATCHDOG_ERROR);
+  					    }						
+  				    }
+  				  }
+  					$delete_campaign = new Campaign;  // Have to use new campaign object so that other parameters don't get set.
+  					$delete_campaign->id = $campaign->id;
+  					$delete_campaign->status = 'DELETED';
+  
+  					$operation = new CampaignOperation();
+  					$operation->operand = $delete_campaign;
+  					$operation->operator = 'SET';
+  
+  					$operations = array($operation);
+  
+  					// Delete  campaign.
+  					$result = $campaignService->mutate($operations);
+  					if(!isset($result->value)) {
+  						watchdog('adwords_crawler', t('Unable to delete campaign @campaign', array('@campaign' => $campaign->name)), WATCHDOG_ERROR);
+  					}						
+  				}
+  			}
+  		}
+  	}
+  
+  	catch (exception $e) {
+  		// watchdog('adwords_crawler', t('adwords_crawler_get_campaign_by_name generated exception' . print_r($e, true)), NULL, WATCHDOG_ERROR);
+  		watchdog('adwords_crawler', t('adwords_crawler_purge_campaigns generated exception %faultstring'), array('%faultstring' => $e->faultstring), WATCHDOG_ERROR);
+  	}
+  }
 }
 
-function crawler_get_campaign_by_name($user, $name, $force_update = 0) {
+function adwords_crawler_get_campaign_by_name($user, $name, $force_update = 0) {
 	try {
 		// Get the CampaignService.
 		$campaignService = $user->GetCampaignService('v201008');
@@ -223,13 +262,13 @@ function crawler_get_campaign_by_name($user, $name, $force_update = 0) {
 		}
 	}
 	catch (exception $e) {
-		// watchdog('adwords_crawler', t('crawler_get_campaign_by_name generated exception' . print_r($e, true)), NULL, WATCHDOG_ERROR);
-		watchdog('adwords_crawler', t('crawler_get_campaign_by_name generated exception %faultstring'), array('%faultstring' => $e->faultstring), WATCHDOG_ERROR);
+		// watchdog('adwords_crawler', t('adwords_crawler_get_campaign_by_name generated exception' . print_r($e, true)), NULL, WATCHDOG_ERROR);
+		watchdog('adwords_crawler', t('adwords_crawler_get_campaign_by_name generated exception %faultstring'), array('%faultstring' => $e->faultstring), WATCHDOG_ERROR);
 	}
 	return null;
 }
 
-function crawler_get_adgroup_by_name($user, $name, $campaign_id, $max_bid = .1, $force_update = false) {
+function adwords_crawler_get_adgroup_by_name($user, $name, $campaign_id, $max_bid = .1, $force_update = false) {
 	try {
 		// Get the AdGroupService.
 		$adGroupService = $user->GetAdGroupService('v201008');
@@ -279,16 +318,16 @@ function crawler_get_adgroup_by_name($user, $name, $campaign_id, $max_bid = .1, 
 		}
 	}
 	catch (exception $e) {
-		watchdog('adwords_crawler', 'crawler_get_adgroup_by_name generated exception %faultstring', array('%faultstring' => $e->faultstring), WATCHDOG_ERROR);
+		watchdog('adwords_crawler', 'adwords_crawler_get_adgroup_by_name generated exception %faultstring', array('%faultstring' => $e->faultstring), WATCHDOG_ERROR);
 	}
 	return null;
 }
 
-function crawler_add_adgroup($user, $name, $campaign_id, $max_bid = .1, $force_update = false) {
+function adwords_crawler_add_adgroup($user, $name, $campaign_id, $max_bid = .1, $force_update = false) {
 	/*
 	 * See if we have a adgroup with this name, if so return that id
 	 */
-	if($adgroup_id = crawler_get_adgroup_by_name($user, $name, $campaign_id, $max_bid, $force_update)) {
+	if($adgroup_id = adwords_crawler_get_adgroup_by_name($user, $name, $campaign_id, $max_bid, $force_update)) {
 		return $adgroup_id;
 	}
 	/* otherwise add a new adgroup */
@@ -333,12 +372,12 @@ function crawler_add_adgroup($user, $name, $campaign_id, $max_bid = .1, $force_u
 	return null;
 }
 
-function crawler_add_campaign($user, $title, $force_update = false) {
-	$campaign_name = 'Auto Article Campaign - ' . $title;
+function adwords_crawler_add_campaign($user, $title, $force_update = false) {
+	$campaign_name = $title;
 	/*
 	 * See if we have a campaign with this name, if so return that id
 	 */
-	if($campaign_id = crawler_get_campaign_by_name($user, $campaign_name, $force_update)) {
+	if($campaign_id = adwords_crawler_get_campaign_by_name($user, $campaign_name, $force_update)) {
 		return $campaign_id;
 	}
 
@@ -409,12 +448,12 @@ function crawler_add_campaign($user, $title, $force_update = false) {
 	return null;
 }
 
-function crawler_update_adwords($host, &$context) {
+function adwords_crawler_update_adwords($host, &$context) {
 	/*
 	 * Keywords are created under an adgroup which in turn are created
 	 * under a campaign, so first create campaign.
 	 */
-	$link_query = db_query("
+  $link_query = db_query("
     SELECT * 
     FROM {adwords_crawler_links} 
     WHERE host_id = %d
@@ -436,7 +475,7 @@ function crawler_update_adwords($host, &$context) {
 	/*
 	 * Connect to the adwords server using a client ID in this instance
 	 */
-	$user = crawler_adwords_login($host['client_email']);
+	$user = adwords_crawler_adwords_login($host['client_email']);
 	if (!$user) {
 		watchdog('adwords_crawler', t('Cannot log into AdWords server'), NULL, WATCHDOG_ERROR);
 		return;
@@ -449,11 +488,16 @@ function crawler_update_adwords($host, &$context) {
 	//  drupal_write_record('adwords_crawler_links', $link_record, array('id'));
 
 	// Add the campaign
-	if(!$campaign_id = crawler_add_campaign($user, $link_result->breadcrumb, $host['force_update'])) {
+	if (!empty($host['prefix'])) {
+	  $title = $host['prefix'] . ' - ' . $link_result->breadcrumb;
+	} else {
+	  $title = 'Automated Article Campaign - ' . $link_result->breadcrumb;
+	}
+	if(!$campaign_id = adwords_crawler_add_campaign($user, $title, $host['force'])) {
 		return; // If there was a problem with the campaign add then do next link
 	}
 	$adgroup_name = $link_result->article_id . ' - ' . $link_result->title;
-	if(!$adgroup_id = crawler_add_adgroup($user, $adgroup_name, $campaign_id, $host['max_bid'], $host['force_update'])) {
+	if(!$adgroup_id = adwords_crawler_add_adgroup($user, $adgroup_name, $campaign_id, $host['max_bid'], $host['force_update'])) {
 		return; // If there was a problem with the adgroup add then do next link
 	}
 	try {
@@ -493,77 +537,65 @@ function crawler_update_adwords($host, &$context) {
 				//          }
 				//        } else {
 				watchdog('adwords_crawler', "No ad group criteria were added.");
-		}
-	}
-}
-catch (Exception $e) {
-	watchdog('adwords_crawler', 'Exception defining ad group criteria %faultstring', array('%faultstring' => $e->faultstring), WATCHDOG_ERROR);
-}
+  		}
+  	}
+  }
+  catch (Exception $e) {
+  	watchdog('adwords_crawler', 'Exception defining ad group criteria %faultstring', array('%faultstring' => $e->faultstring), WATCHDOG_ERROR);
+  }
+  
+  try {
+  	// Get the AdGroupAdService and add ads.
+  	$adGroupAdService = $user->GetAdGroupAdService('v201008');
+  
+  	// Create a text ad for this adgroup
+  	// Create text ad.
+  	$textAd = new TextAd();
+  	
+  	$formatted_ad = adwords_crawler_format_text_ad($link_result);
 
-try {
-	// Get the AdGroupAdService and add ads.
-	$adGroupAdService = $user->GetAdGroupAdService('v201008');
-
-	// Create a text ad for this adgroup
-	// Create text ad.
-	$textAd = new TextAd();
-	$headline = substr($link_result->title, 0, 25);
-	$headline = substr($headline, 0, strrpos($headline, ' '));
-	$textAd->headline = $headline;
-	$textAd->url = $link_result->url;
-	$description1 = substr($link_result->description, 0, 35);
-	$description1 = substr($description1, 0, strrpos($description1, ' '));
-	if(!$description1) {
-		$description1 = $headline;
-	}
-	$description2 = substr($link_result->description, strlen($description1), 35);
-	$description2 = substr($description2, 0, strrpos($description2, ' '));
-	if(!$description2) {
-		$description2 = $headline;
-	}
-	$textAd->description1 = $description1;
-	$textAd->description2 = $description2;
-	$display_url = explode("/", $link_result->url);
-	// Pop off the article bit at the end
-	array_pop($display_url);
-	$textAd->displayUrl = implode("/", $display_url);
-
-	// Create ad group ad.
-	$textAdGroupAd = new AdGroupAd();
-	$textAdGroupAd->adGroupId = $adgroup_id;
-	$textAdGroupAd->ad = $textAd;
-
-	// Create operations.
-	$textAdGroupAdOperation = new AdGroupAdOperation();
-	$textAdGroupAdOperation->operand = $textAdGroupAd;
-	$textAdGroupAdOperation->operator = 'ADD';
-
-	$operations = array($textAdGroupAdOperation);
-
-	// Add ads.
-	$result = $adGroupAdService->mutate($operations);
-
-	if (isset($result->value)) {
-		foreach ($result->value as $adGroupAd) {
-			watchdog('adwords_crawler', t('Ad added to AdGroup @adgroup with id @adid', array('@adgroup' => $adGroupAd->name, '@adid' => $adGroupAd->id)));
-		}
-	} else {
-		watchdog('adwords_crawler', t('Ad not added to AdGroup @adgroup', array('@adgroup' => $adGroup->name)));
-	}
-
-}
-catch (Exception $e) {
-	//      foreach($e->detail->ApiExceptionFault->errors as $error) {
-	//        $msg .=
-	//      }
-	$vars = array(
-        '@fault' => $e->faultstring,
-        '@headline' => $headline,
-        '@description1' => $description1,
-        '@description2' => $description2,
-	// '@exception' => print_r($e, true)
-        '@exception' => $e->faultstring,
-	);
+  	$textAd->headline = $formatted_ad['headline'];
+  	$textAd->url = $formatted_ad['url'];
+  	$textAd->description1 = $formatted_ad['description1'];
+  	$textAd->description2 = $formatted_ad['description2'];
+  	$textAd->displayUrl = $formatted_ad['display_url'];
+  
+  	// Create ad group ad.
+  	$textAdGroupAd = new AdGroupAd();
+  	$textAdGroupAd->adGroupId = $adgroup_id;
+  	$textAdGroupAd->ad = $textAd;
+  
+  	// Create operations.
+  	$textAdGroupAdOperation = new AdGroupAdOperation();
+  	$textAdGroupAdOperation->operand = $textAdGroupAd;
+  	$textAdGroupAdOperation->operator = 'ADD';
+  
+  	$operations = array($textAdGroupAdOperation);
+  
+  	// Add ads.
+  	$result = $adGroupAdService->mutate($operations);
+  
+  	if (isset($result->value)) {
+  		foreach ($result->value as $adGroupAd) {
+  			watchdog('adwords_crawler', t('Ad added to AdGroup @adgroup with id @adid', array('@adgroup' => $adGroupAd->name, '@adid' => $adGroupAd->id)));
+  		}
+  	} else {
+  		watchdog('adwords_crawler', t('Ad not added to AdGroup @adgroup', array('@adgroup' => $adGroup->name)));
+  	}
+  
+  }
+  catch (Exception $e) {
+  	//      foreach($e->detail->ApiExceptionFault->errors as $error) {
+  	//        $msg .=
+  	//      }
+  	$vars = array(
+          '@fault' => $e->faultstring,
+          '@headline' => $headline,
+          '@description1' => $description1,
+          '@description2' => $description2,
+  	// '@exception' => print_r($e, true)
+          '@exception' => $e->faultstring,
+  	);
 
 	watchdog('adwords_crawler', 'Creating ad failed with exception.  Exception Details: @fault <br/>
         Ad details: <br />
@@ -575,7 +607,7 @@ catch (Exception $e) {
 }
 
 
-function crawler_crawl_url($host, &$context) {
+function adwords_crawler_crawl_url($host, &$context) {
 
 	/*
 	 * If we've reached our limit just return, don't process any more links.
@@ -691,7 +723,7 @@ function crawler_crawl_url($host, &$context) {
 				/*
 				* Crawl this child page looking for links.
 				*/
-				//crawler_crawl_url($link_url, $base_url, $host);
+				//adwords_crawler_crawl_url($link_url, $base_url, $host);
 				/*
 				* We got here so have a valid link that we want to crawl.
 				* Save it to database so controlling batch will crawl it.
@@ -711,7 +743,7 @@ function crawler_crawl_url($host, &$context) {
 	}
 }
 
-function crawler_adwords_login($client_login = null) {
+function adwords_crawler_adwords_login($client_login = null) {
 	$path = dirname(__FILE__) . '/../src';
 	set_include_path(get_include_path() . PATH_SEPARATOR . $path);
 
@@ -754,7 +786,7 @@ function crawler_adwords_login($client_login = null) {
  *
  */
 
-function crawler_get_keywords($host, &$context) {
+function adwords_crawler_get_keywords($host, &$context) {
 	/*
 	 * submit all the urls for a particular host to AdWords to get keyword
 	 * suggestions.  Then save them to a database.  Only do this for "articles"
@@ -784,7 +816,7 @@ function crawler_get_keywords($host, &$context) {
 		return;
 	}
 
-	$user = crawler_adwords_login();
+	$user = adwords_crawler_adwords_login();
 	if (!$user) {
 		watchdog('adwords_crawler', t('Cannot log into AdWords server'), NULL, WATCHDOG_ERROR);
 		return;
@@ -807,7 +839,7 @@ function crawler_get_keywords($host, &$context) {
 		// Set selector paging (required for targeting idea service).
 		$paging = new Paging();
 		$paging->startIndex = 0;
-		$paging->numberResults = $host['number_of_keywords'];
+		$paging->numberResults = $host['number_keywords'];
 		$selector->paging = $paging;
 
 		// Create related to url search parameter.
@@ -857,24 +889,24 @@ function crawler_get_keywords($host, &$context) {
 /**
  * Implements hook_menu();
  */
-function crawler_menu() {
-	$items['admin/settings/crawler'] = array(
+function adwords_crawler_menu() {
+	$items['admin/settings/adwords/crawler'] = array(
     'title' => t('AdWords Crawler'),
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('crawler_admin_settings'),
+    'page arguments' => array('adwords_crawler_admin_settings'),
     'type' => MENU_NORMAL_ITEM,
     'access arguments' => array('administer adwords'),
 	);
-	$items['admin/settings/crawler/settings'] = array(
+	$items['admin/settings/adwords/crawler/settings'] = array(
     'title' => t('Settings'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'access arguments' => array('administer adwords'),
     'weight' => -10,
 	);
-	$items['admin/settings/crawler/hosts'] = array(
+	$items['admin/settings/adwords/crawler/hosts'] = array(
     'title' => t('Hosts'),
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('crawler_admin_hosts'),
+    'page arguments' => array('adwords_crawler_admin_hosts'),
     'type' => MENU_LOCAL_TASK,
     'access arguments' => array('administer adwords'),   
 	);
@@ -882,7 +914,8 @@ function crawler_menu() {
 	return $items;
 }
 
-function crawler_admin_settings() {
+function adwords_crawler_admin_settings() {
+  
 	$form['adwords'] = array(
     '#type' => 'fieldset',
     '#title' => t('AdWords server settings'),
@@ -909,29 +942,210 @@ function crawler_admin_settings() {
 	return system_settings_form($form);
 }
 
-function crawler_admin_hosts($form_state) {
+function adwords_crawler_admin_hosts($form_state) {
+  $form['#tree'] = true;
 
+  $query = db_query("SELECT * FROM {adwords_crawler_hosts}");
+   $form['hosts'] = array(
+     '#type' => 'fieldset',
+   );  
+   
+   $options = array(
+   	'crawl' => t('URL Crawl'), 
+   	'keywords' => t('Generate Keywords'), 
+   	'adwords' => t('Create AdWords Campaigns')
+   );
+   
+   while($host = db_fetch_object($query)) {
+    $form['hosts'][$host->id]['url_title'] = array(
+       '#type' => 'markup',
+       '#title' => 'URL',
+       '#value' => '<h2>' . $host->url . '</h2>',
+     );
+     
+     $form['hosts'][$host->id][id] = array(
+       '#type' => 'hidden',
+       '#value' => $host->id,
+     );
+     
+     $form['hosts'][$host->id]['url'] = array(
+       '#type' => 'textfield',
+       '#title' => 'URL',
+       '#value' => $host->url,
+     );     
+     
+     $form['hosts'][$host->id]['home_url'] = array(
+       '#type' => 'textfield',
+       '#title' => 'Home URL',
+       '#value' => $host->home_url,
+     );
 
-	$form['crawl_first_only'] = array(
-    '#type' => 'submit',
-    '#value' => 'Crawl First Host',
-    '#submit' => array('crawler_crawl_first_only'),
-	);
-	
+     $form['hosts'][$host->id]['client_email'] = array(
+       '#type' => 'textfield',
+       '#title' => 'Client Email',
+       '#value' => $host->client_email,
+     );     
+
+     $form['hosts'][$host->id]['article_matching_pattern'] = array(
+       '#type' => 'textfield',
+       '#title' => 'Article Matching Pattern',
+       '#value' => $host->article_matching_pattern,
+       '#description' => 'Format of a URL that will be considered an "article"',
+     );     
+          
+     $form['hosts'][$host->id]['article_css_selector'] = array(
+       '#type' => 'textfield',
+       '#title' => 'Article CSS Selector',
+       '#value' => $host->article_css_selector,
+       '#description' => 'CSS to find article content',
+     );     
+     
+     $form['hosts'][$host->id]['daily_budget'] = array(
+       '#type' => 'textfield',
+       '#title' => 'Daily Budget',
+       '#value' => $host->daily_budget,
+     );     
+
+     $form['hosts'][$host->id]['max_bid'] = array(
+       '#type' => 'textfield',
+       '#title' => 'Max Bid',
+       '#value' => $host->max_bid,
+     );     
+        
+     $form['hosts'][$host->id]['crawl'] = array(
+       '#type' => 'checkboxes',
+       '#title' => 'Crawl Type',
+       '#options' => $options,
+     );
+
+    $form['hosts'][$host->id]['pages'] = array(
+       '#type' => 'textfield',
+       '#title' => 'Pages',
+       '#description' => 'Number of pages for crawl to find',
+       '#size' => 3,
+       '#default_value' => 50,
+     );
+     
+     $form['hosts'][$host->id]['number_keywords'] = array(
+       '#type' => 'textfield',
+       '#title' => 'Number of Keywords',
+       '#description' => 'Number of keywords to generate for a URL',
+       '#size' => 3,
+       '#default_value' => 50,
+     );
+     $form['hosts'][$host->id]['force'] = array(
+       '#type' => 'checkbox',
+       '#title' => 'Purge?',
+       '#description' => 'If selected will clear tables for this host and campaigns for this prefix.'
+     );
+     
+     $form['hosts'][$host->id]['prefix'] = array(
+       '#type' => 'textfield',
+       '#title' => 'AdWords Prefix',
+       '#description' => 'Will be added to the start of any campaigns for reference.'
+     );
+   }
 	 $form['crawl_all'] = array(
     '#type' => 'submit',
-    '#value' => 'Crawl All Hosts',
-    '#submit' => array('crawler_crawl_all'),
+    '#value' => 'Crawl Selected Hosts',
+    '#submit' => array('adwords_crawler_crawl_all'),
+  );
+  
+ $form['test'] = array(
+    '#type' => 'submit',
+    '#value' => 'Test Text Ads',
+    '#submit' => array('adwords_crawler_test'),
+  );
+  
+ $form['delete'] = array(
+    '#type' => 'submit',
+    '#value' => 'Delete Campaigns',
+    '#submit' => array('adwords_crawler_purge_campaigns'),
   );
 
 	//  $form['crawl_all'] = array(
 	//    '#type' => 'submit',
 	//    '#value' => 'Crawl All',
-	//    '#submit' => array('crawler_crawl_all'),
+	//    '#submit' => array('adwords_crawler_crawl_all'),
 	//  );
 
 	return $form;
 }
 
+function adwords_crawler_test($form, $form_state) {
+  drupal_set_message('Testing Ads');
+  
+  foreach($form_state['values']['hosts'] as $host) {
+    $link_query = db_query("
+      SELECT * 
+      FROM {adwords_crawler_links} 
+      WHERE host_id = %d
+      AND article_id IS NOT NULL", $host['id']);
+    
+    $output = '';
+    while($link_result = db_fetch_object($link_query)) {
+      $formatted_ad = adwords_crawler_format_text_ad($link_result);
+      $output .= '<div class="ad"><ul>';
+      $output .= '<li><a href="' . $formatted_ad['url'] . '">' . $formatted_ad['headline'] . '</a></li>';
+      $output .= '<li>' . $formatted_ad['description1'] . '</li>';
+      $output .= '<li>' . $formatted_ad['description2'] . '</li>';
+      $output .= '<li>' . $formatted_ad['display_url'] . '</li>';
+      $output .= '</ul></div>';
+    }
+    
+    drupal_set_message($output);
+  }
+}
 
-
+function adwords_crawler_format_text_ad($link_result) {
+  $return = array();
+  $headline = $link_result->title;
+  $description = $link_result->description;
+  
+  /* do substitutions in headline and description before doing anything else */
+  $replacements = db_query("SELECT * FROM {adwords_crawler_replacements}");
+  
+  while($replacement = db_fetch_object($replacements)) {
+    $headline = preg_replace('/\b' . $replacement->search_string . '\b/i', $replacement->replacement_string, $headline);
+    $description = preg_replace('/\b' .$replacement->search_string . '\b/i', $replacement->replacement_string, $description);
+  }
+  /* Trim headline if we need to */
+  if (($headline_len = strlen($headline)) > 25) {
+  	// $headline = substr($headline, 0, 25);
+  	/*
+  	 * Below strrpos will look for a space at negative the value that corresponds to the 25th 
+  	 * character and move towards the beginning of the word
+  	 */ 
+  	$headline = substr($headline, 0, strrpos($headline, ' ', 25 - $headline_len));
+  }
+  $return['headline'] = $headline;
+  $return['url'] = $link_result->url;
+  
+  $description1 = $description;
+  /* Cut first 35 characters of substring if required */
+  if (($desc1_len = strlen($description1)) > 35 ) {
+  	/* Then cut to last space */
+  	$description1 = substr($description1, 0, strrpos($description1, ' ', 35 - $desc1_len));
+  }
+  if(!$description1) {
+  	$description1 = $headline;
+  }
+  
+  $description2 = substr($description, strlen($description1));
+  if (($desc2_len = strlen($description2)) > 35) {
+  	// $description2 = substr($description2, 0, 35);
+  	/* Then cut to last space */
+    $description2 = substr($description2, 0, strrpos($description2, ' ', 35 - $desc2_len));
+  }
+  if(!$description2) {
+  	$description2 = $headline;
+  }
+  $display_url = explode("/", $link_result->url);
+  // Pop off the article bit at the end
+  array_pop($display_url);
+  $return['description1'] = $description1;
+  $return['description2'] = $description2;
+  $return['display_url'] = implode("/", $display_url);
+  
+  return $return;
+}

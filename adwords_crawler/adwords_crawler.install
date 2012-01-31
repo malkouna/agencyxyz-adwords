@@ -1,13 +1,13 @@
 <?php
-function crawler_install() {
-  drupal_install_schema('crawler');
+function adwords_crawler_install() {
+  drupal_install_schema('adwords_crawler');
 }
 
-function crawler_uninstall() {
-  drupal_uninstall_schema('crawler');
+function adwords_crawler_uninstall() {
+  drupal_uninstall_schema('adwords_crawler');
 }
 
-function crawler_schema() {
+function adwords_crawler_schema() {
 $schema['adwords_crawler_links'] = array(
   'description' => t('TODO: please describe this table!'),
   'fields' => array(
@@ -95,6 +95,80 @@ $schema['adwords_crawler_links'] = array(
         'type' => 'varchar',
         'length' => '80',
         'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  
+  $schema['adwords_crawler_hosts'] = array(
+    'description' => t('Reference table for hosts to be crawled.'),
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'url' => array(
+        'description' => t('Base URL of host to crawled.'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'home_url' => array(
+        'description' => t('Use this field if the base URL redirects to a different URL'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+      ),
+      'client_email' => array(
+        'description' => t('Controls client login to create AdWords entities against.'),
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'article_matching_pattern' => array(
+        'description' => t('What a URL for an article looks like.'),
+        'type' => 'varchar',
+        'length' => '1024',
+        'not null' => TRUE,
+      ),
+      'article_css_selector' => array(
+        'description' => t('CSS selector to select HTML snippet that contains content'),
+        'type' => 'varchar',
+        'length' => '1024',
+        'not null' => TRUE,
+      ),
+      'daily_budget' => array(
+        'type' => 'numeric',
+        'not null' => TRUE,
+        'precision' => '10',
+        'scale' => '5',
+      ),
+      'max_bid' => array(
+        'type' => 'numeric',
+        'not null' => TRUE,
+        'precision' => '10',
+        'scale' => '5',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  
+  $schema['adwords_crawler_replacements'] = array(
+    'description' => t('Maintain a list of replacements for headlines and descriptions'),
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'search_string' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'replacement_string' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
       ),
     ),
     'primary key' => array('id'),
