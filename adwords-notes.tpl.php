@@ -11,7 +11,9 @@ drupal_add_js('misc/collapse.js');
 	    <tr>
 	        <th>Date</th>
 	        <th>Note</th>
-          <th></th>
+	        <?php if (user_access('administer adwords')): ?>
+          	<th></th>
+        	<?php endif; ?>
 	    </tr>
 	  </thead>
 	  <?php if(empty($notes)): ?>
@@ -21,10 +23,12 @@ drupal_add_js('misc/collapse.js');
 		    <tr class="<?php print $note['zebra']; ?>">
 	  	      <td class="daily-narrow"><?php print $note['date']; ?></td>
 	    	    <td><?php print $note['note']; ?></td>
-        	  <td class="daily-narrow">
-          	  <?php print l('Edit', 'adwords/daily/note/edit/' . $note['nid']) . ' | ' .
-                 l('Delete', 'adwords/daily/note/delete/' . $note['nid']); ?>
-          	</td>
+	    	    <?php if (user_access('administer adwords')): ?>
+          	  <td class="daily-narrow">
+            	  <?php print l('Edit', 'adwords/daily/note/edit/' . $note['nid']) . ' | ' .
+                   l('Delete', 'adwords/daily/note/delete/' . $note['nid']); ?>
+            	</td>
+          	<?php endif; ?>
 	    	</tr>
 	    <?php endforeach; ?>
     <?php endif; ?>

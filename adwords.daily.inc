@@ -41,6 +41,13 @@ function adwords_daily_overview($account = false) {
   
   $reporting_start = date("Y-m-01");
   $day_of_month = date("j") - 1; // Todays values won't be in yet, work from yesterday
+  /* @AM 1/2/2012 If $day_of_month is 0 then show complete previous month */
+  if ($day_of_month == 0) {
+    /* Take one month off $reporting_start */
+    $reporting_start = date("Y-m-01", strtotime('last month'));
+    /* And make $day_of_month end day of that month ('t' is number of days in month */
+    $day_of_month = date('t', strtotime($reporting_start));
+  }
   $output = "Reporting for month starting " . $reporting_start . " at day " . $day_of_month;
   while($result = db_fetch_object($clients)) {
     /*
@@ -87,8 +94,12 @@ function adwords_daily_overview($account = false) {
   		$output .= '
         <tr>
             <td>' . l($result->name, 'adwords/daily/detail/' . $result->tid) . '</td>
-            <td colspan="12"> No campaign budgets have been defined for this client</td>
-            <td class="define-campaign-budget">' . l('<span>Define Campaign Budget</span>', 'adwords/budgets/' . $result->tid, $options) . '</td>
+            <td colspan="12"> No campaign budgets have been defined for this client</td>';
+      if (user_access('administer adwords')) {
+        $output .= '
+            <td class="define-campaign-budget">' . l('<span>Define Campaign Budget</span>', 'adwords/budgets/' . $result->tid, $options) . '</td>';
+      }
+      $output .= '
          </tr>';
   	}
   	else {
@@ -108,14 +119,18 @@ function adwords_daily_overview($account = false) {
         $output .= '
             <tr>
                 <td>' . l($result->name, 'adwords/daily/detail/' . $result->tid) . '</td>' .
-                $totals_string . '
-                <td class="define-campaign-budget">' . l('<span>Define Campaign Budget</span>', 'adwords/budgets/' . $result->tid, $options) . '</td>
+                $totals_string;
+          if (user_access('administer adwords')) {
+            $output .= '
+                <td class="define-campaign-budget">' . l('<span>Define Campaign Budget</span>', 'adwords/budgets/' . $result->tid, $options) . '</td>';
+          }
+          $output .= '
             </tr>';
   	}
   }
   
   if($output) {
-    $output = '
+    $result = '
         <table>
             <thead>
                 <tr>
@@ -131,27 +146,43 @@ function adwords_daily_overview($account = false) {
                     <td>Spend Change Required</td>
                     <td>Spend Change Required</td>
                     <td>Average Position Overall</td>
-                    <td>Target Position Overall</td>
-                    <td>Edit Budget</td>
+                    <td>Target Position Overall</td>';
+    if(user_access('administer adwords')) {
+      $result .= '
+                    <td>Edit Budget</td>';
+    }
+    $result .= '
                 </tr>
             </thead>
             <tbody>' . $output . '
             </tbody>
         </table>';
   }
-  return $output;
+  return $result;
 }
 
 function _adwords_daily_totals($client_id, $targets) {
 	$yesterday = date("Y-m-d", mktime(0, 0, 0, date("m"), date("d")-1, date("Y"))); // Todays values won't be in yet, so work from yesterday
-    $campaign_date = date("Y-m-01");
-    $day_of_month = date("j") - 1;  // Use yesterday 
-    $inventory_budget = $targets->total_budget/((100 + $targets->service_fee)/100.0);
-    $days_in_month = date('t');
-    $days_left_in_month = $days_in_month - $day_of_month + 1; // +2 as want the day before yesterday
-    $daily_spend = $inventory_budget/$days_in_month;
-	
-    $target_monthly_clicks = $inventory_budget/$targets->target_cpc;
+  $campaign_date = date("Y-m-01");
+  $day_of_month = date("j") - 1;  // Use yesterday 
+  /* @AM 1/2/2012 If $day_of_month is 0 then show complete previous month */
+  if ($day_of_month == 0) {
+    /* "Yesterday" will be last day of the previous month */
+    $yesterday = date("Y-m-d", strtotime('yesterday', $campaign_date));
+    /* Take one month off $campaign_date */
+    $campaign_date = date("Y-m-01", strtotime('last month'));
+    /* And make $day_of_month end day of that month ('t' is number of days in month */
+    $day_of_month = date('j', strtotime($reporting_start));
+
+  }
+
+
+  $inventory_budget = $targets->total_budget/((100 + $targets->service_fee)/100.0);
+  $days_in_month = date('t', strtotime($campaign_date));
+  $days_left_in_month = $days_in_month - $day_of_month + 1; // +2 as want the day before yesterday
+  $daily_spend = $inventory_budget/$days_in_month;
+
+  $target_monthly_clicks = $inventory_budget/$targets->target_cpc;
 	$target_daily_average_clicks = $target_monthly_clicks/$days_in_month;  // date('t') gives days in current month
 	// Get aggregate data
 	$totals_data = db_fetch_object(db_query("
@@ -197,6 +228,7 @@ function _adwords_daily_totals($client_id, $targets) {
        	
 	return $results;
 }
+
 function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL) {
   if (!is_numeric($client_id)) {
     return drupal_access_denied();
@@ -205,9 +237,15 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
   if (!$start_date) {
      $start_date = date("Y-m-01");
   }
-    if (!$end_date) {
-      $end_date = date("Y-m-d");
-    }
+  if (!$end_date) {
+    $end_date = date("Y-m-d");
+  }
+  
+  /* if we're at the start of the month rewind to previous month */
+  if (date('j', strtotime($end_date)) == 1) {
+    $start_date = date("Y-m-01", strtotime('last month', $start_date));
+    $end_date = date("Y-m-d", strtotime('last month', $end_date));
+  }  
   
   $start_datestamp = strtotime($start_date);
   // Get and display all notes for this client
@@ -332,8 +370,10 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
     $columns['signups'] = '';
     $columns['pageviews'] = '';
     $columns['default_conv'] = '';
-    $columns['add_note'] = l('<span>Add Note</span>', 'adwords/daily/note/add/' . $client_id . '/' . $rowdate, $options);
-    $columns['add_note'] .= '<ul class="notetext">' . $notetext . '</ul>';
+    if (user_access('administer adwords')) {
+      $columns['add_note'] = l('<span>Add Note</span>', 'adwords/daily/note/add/' . $client_id . '/' . $rowdate, $options);
+      $columns['add_note'] .= '<ul class="notetext">' . $notetext . '</ul>';
+    }
      
     //    foreach($row as $column => $value) {
     //      $columns[$column] = $value;
@@ -398,7 +438,10 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
   
   // Now theme the results
   $output = theme('adwords_notes', $notes);
-  $output .= l(t('Edit Columns'), 'adwords/daily/detail/' . $client_id . '/configure');
+  if (user_access('administer adwords')) {
+    $output .= l(t('Edit Columns'), 'adwords/daily/detail/' . $client_id . '/configure');
+  }
+  
   $output .= theme('adwords_results', $rows, $totals, $client_id);
 
   return $output;

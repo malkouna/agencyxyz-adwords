@@ -66,26 +66,30 @@ function adwords_menu() {
   $items['adwords/daily'] = array(
     'title' => 'AdWords Daily Overview',
     'page callback' => 'adwords_daily_overview',
+    'page arguments' => array(true),
     'access arguments' => array('access adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['adwords/daily/all'] = array(
-    'title' => t('All'),
+    
+  $items['adwords/daily/account'] = array(
+    'title' => t('My Clients'),
     'page callback' => 'adwords_daily_overview',
+    'page arguments' => array(true),  
     'access arguments' => array('access adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  
-  $items['adwords/daily/account'] = array(
-    'title' => t('My Clients'),
+
+  $items['adwords/daily/all'] = array(
+    'title' => t('All'),
     'page callback' => 'adwords_daily_overview',
-    'page arguments' => array(true),
-    'access arguments' => array('access adwords'),
+    'access arguments' => array('administer adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_LOCAL_TASK,
   );
+  
+
   $items['adwords/daily/detail/%'] = array(
     'title' => 'AdWords Daily Traffic',
     'page callback' => 'adwords_daily_traffic',
@@ -94,6 +98,7 @@ function adwords_menu() {
     'file' => 'adwords.daily.inc',
     'type' => MENU_CALLBACK,
   );
+  
   $items['adwords/daily/detail/%/configure'] = array(
     'title' => 'Configure AdWords Daily Traffic Report',
     'page callback' => 'drupal_get_form',
@@ -102,11 +107,12 @@ function adwords_menu() {
     'file' => 'adwords.daily.configure.inc',
     'type' => MENU_CALLBACK,
   );
+  
   $items['adwords/budgets/%'] = array(
     'title' => 'AdWords Campaign Budget',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('adwords_campaign_budget', 2),
-    'access arguments' => array('access adwords'),
+    'access arguments' => array('administer adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_CALLBACK,
   );
@@ -115,7 +121,7 @@ function adwords_menu() {
     'title' => 'Edit Note',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('adwords_daily_note', 3, 4),
-    'access arguments' => array('access adwords'),
+    'access arguments' => array('administer adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_CALLBACK,
   );
@@ -124,7 +130,7 @@ function adwords_menu() {
     'title' => 'Delete Note',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('adwords_daily_note', 3, 4),
-    'access arguments' => array('access adwords'),
+    'access arguments' => array('administer adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_CALLBACK,
   );
@@ -133,7 +139,7 @@ function adwords_menu() {
     'title' => 'Add note to report',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('adwords_daily_note', 3, 4, 5),
-    'access arguments' => array('access adwords'),
+    'access arguments' => array('administer adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_CALLBACK,
   );
@@ -141,7 +147,7 @@ function adwords_menu() {
     'title' => 'Archived Reports',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('adwords_archived_data'),
-    'access arguments' => array('access adwords'),
+    'access arguments' => array('administer adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_CALLBACK,
   );
@@ -261,12 +267,14 @@ function adwords_preprocess_adwords_results(&$variables) {
   while ($row = db_fetch_object($query)) {
     if ($row->hide != 1) {
       /* Get header */
-      $headers[] = $row->title;
-      /* Put columns in a copy of results, in the right order */
-      foreach($variables['results'] as $key => $result) {
-        $sorted_results[$key][$row->column] = $result[$row->column];
+      if (user_access('administer adwords') || $row->column != 'add_note') {
+        $headers[] = $row->title;
+        /* Put columns in a copy of results, in the right order */
+        foreach($variables['results'] as $key => $result) {
+          $sorted_results[$key][$row->column] = $result[$row->column];
+        }
+        $sorted_totals[$row->column] = $variables['totals'][$row->column];
       }
-      $sorted_totals[$row->column] = $variables['totals'][$row->column];
     }
   }
   // Get header data out
