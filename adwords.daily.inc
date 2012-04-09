@@ -247,7 +247,6 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
     $end_date = date("Y-m-d", strtotime('last month', $end_date));
   }  
   
-  $start_datestamp = strtotime($start_date);
   // Get and display all notes for this client
   $query = db_query("
       SELECT *
@@ -264,7 +263,41 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
     $order++;
   }
 
+  $result = db_fetch_object(
+    db_query("
+      SELECT name
+      FROM {term_data}
+      WHERE tid = %d", $client_id));
 
+  drupal_set_title(t('Adwords Daily Traffic Report for @client', array('@client' => $result->name)));
+  // $output = 'Hello World' . $client_id;
+
+  $results = adwords_daily_traffic_calc($client_id, $result->name, $start_date, $end_date);
+  
+  // Now theme the results
+  $output = theme('adwords_notes', $notes);
+  if (user_access('administer adwords')) {
+    $output .= l(t('Edit Columns'), 'adwords/daily/detail/' . $client_id . '/configure');
+  }
+  
+  $output .= theme('adwords_results', $results['rows'], $results['totals'], $client_id);
+  
+  /* @AM 09/04/2012 Show last months details as well */
+  $archive_start_date = date('Y-m-d', strtotime("-1 month", strtotime($start_date)));;
+  $archive_end_date = date('Y-m-d', strtotime("-1 day", strtotime($start_date)));
+  $archive_results  = adwords_daily_traffic_calc($client_id, $result->name, $archive_start_date, $archive_end_date);
+  $output .= '
+  	<fieldset class="collapsible collapsed">
+    	<legend>Last Month Overview</legend>' .
+      theme('adwords_results', $archive_results['rows'], $archive_results['totals'], $client_id) .
+    '</fieldset>';
+  
+  return $output;
+}
+
+function adwords_daily_traffic_calc($client_id, $client_name, $start_date, $end_date) {
+  $start_datestamp = strtotime($start_date);
+  
   $budget = db_fetch_object(db_query("
       SELECT * 
       FROM adwords_campaign_targets
@@ -284,15 +317,8 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
     $target_monthly_clicks = $inventory_budget/$budget->target_cpc;
     $target_daily_average_clicks = $target_monthly_clicks/$days_in_month;  // date('t') gives days in current month
   }
-
-  $result = db_fetch_object(
-  db_query("
-      SELECT name
-      FROM {term_data}
-      WHERE tid = %d", $client_id));
-
-  drupal_set_title(t('Adwords Daily Traffic Report for @client', array('@client' => $result->name)));
-  // $output = 'Hello World' . $client_id;
+  
+ 
   $rows = array();
 
   $query = db_query("
@@ -301,7 +327,7 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
       WHERE ad.acctname = '%s'
       AND ad.date >= '%s'
       AND ad.date <= '%s'
-      ORDER by ad.date", $result->name, $start_date, $end_date);
+      ORDER by ad.date", $client_name, $start_date, $end_date);
 
   $daynum = 1;
   $actual_cumulative_clicks = 0;
@@ -436,15 +462,10 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
   $totals['cpa'] = '$' . number_format($total_cpa/(($daynum-1)*1000000), '3');
   $totals['target_daily_average_clicks'] = number_format($target_monthly_clicks);
   
-  // Now theme the results
-  $output = theme('adwords_notes', $notes);
-  if (user_access('administer adwords')) {
-    $output .= l(t('Edit Columns'), 'adwords/daily/detail/' . $client_id . '/configure');
-  }
+  $results['totals'] = $totals;
+  $results['rows'] = $rows;
   
-  $output .= theme('adwords_results', $rows, $totals, $client_id);
-
-  return $output;
+  return $results;
 }
 
 function adwords_campaign_budget($form_state, $client_id) {
