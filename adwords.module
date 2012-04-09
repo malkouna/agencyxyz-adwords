@@ -288,5 +288,6 @@ function adwords_preprocess_adwords_results(&$variables) {
 
 function adwords_cron() {
 	include_once 'adwords.process.inc';
-	adwords_process_emails();
+	// @AM 8/2/2012 changed to access API adwords_process_emails();
+	adwords_get_data();
 }
