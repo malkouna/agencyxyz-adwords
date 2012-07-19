@@ -115,7 +115,7 @@ function adwords_get_data() {
     $reportDefinition = new ReportDefinition();
     $reportDefinition->selector = $selector;
     $reportDefinition->reportName = 'AdWords Automated Processing with Conversions';
-    $reportDefinition->dateRangeType = 'LAST_7_DAYS';
+    $reportDefinition->dateRangeType = 'LAST_30_DAYS';
     $reportDefinition->reportType = 'ACCOUNT_PERFORMANCE_REPORT';
     $reportDefinition->downloadFormat = 'XML';
   
@@ -126,7 +126,7 @@ function adwords_get_data() {
     $segmentation_report_definition = new ReportDefinition();
     $segmentation_report_definition->selector = $segmentation_selector;
     $segmentation_report_definition->reportName = 'AdWords Automated Processing with Segmentation';
-    $segmentation_report_definition->dateRangeType = 'LAST_7_DAYS';
+    $segmentation_report_definition->dateRangeType = 'LAST_30_DAYS';
     $segmentation_report_definition->reportType = 'ACCOUNT_PERFORMANCE_REPORT';
     $segmentation_report_definition->downloadFormat = 'XML';
   
@@ -136,7 +136,9 @@ function adwords_get_data() {
     foreach ($graph->accounts as $index => $account) {
   		/* For each of these do an ad hoc report, getting data in XML and saving to db */
       //$xml .= print_r($account, TRUE);
-
+      if ($account->customerId != 9658854421) {
+            continue;
+        }
       // Set additional options.
       $options = array('version' => 'v201109', 'returnMoneyInMicros' => TRUE);
     
@@ -172,7 +174,10 @@ function adwords_get_data() {
             // Data comes with single quotes surrounding the values and db_query tries to escape them
             // so build up queries with concatenation rather than best practice of passing parameters.
             // Key for the data is the acctname and date so delete this row first
-            db_query("DELETE FROM {adwords_data} WHERE date = " . $values['day'] . " AND acctname = " . $values['account']);
+            db_query("
+                DELETE FROM {adwords_data}
+                WHERE date = " . $values['day'] . "
+                AND customerid = " . $values['customerID']);
             // Now insert
             $insert = "INSERT INTO {adwords_data} (" . $column_statement . ") VALUES (" . $value_statement . ")";
             db_query($insert); 
@@ -201,15 +206,33 @@ function adwords_get_data() {
       }
     }
   }
+  /* Do some admin on account names as they can be changed in the MCC interface */
+  /* @AM 17/07/2012 Update the name for any data that has an old customer name */
+  db_query("
+  	UPDATE adwords_data d
+    JOIN (
+        SELECT d.acctname, d.customerid
+        FROM adwords_data d
+        JOIN (
+            SELECT max(date) as date, customerid
+            FROM adwords_data
+            GROUP BY customerid
+        ) d1
+        ON d1.date = d.date
+        AND d1.customerid = d.customerid
+    ) d1
+    ON d.customerid = d1.customerid
+    SET d.acctname = d1.acctname");
 	/*
    * @AM 6/1/2011 Get the unique list of clients and generate taxonomy terms if needed
    */
   db_query("
     INSERT INTO {term_data}
-    SELECT DISTINCT null as tid, 1 as vid, acctname as name, '' as description, 0 as weight
+    SELECT DISTINCT null as tid, 1 as vid, acctname as name, customerid as description, 0 as weight
     FROM adwords_data  ad
     LEFT OUTER JOIN {term_data} td
-    ON ad.acctname = td.name
+    ON ad.customerid = td.description
+    AND ad.acctname = td.name
     WHERE td.name IS NULL");
   
   db_query("
@@ -219,6 +242,10 @@ function adwords_get_data() {
     LEFT OUTER JOIN {term_hierarchy} th
     ON td.tid = th.tid
     WHERE th.tid IS NULL");
+  
+  /* @AM 17/07/2012 Delete unused terms */
+
+  
 }
 
 function adwords_login($client_login = null) {
