@@ -44,6 +44,7 @@ $segmentation_data = array(
 define('FIELDS', serialize($fields));
 define('SEGMENTATION_FIELDS', serialize($segmentation_fields));
 define('SEGMENTATION_DATA', serialize($segmentation_data));
+define('ADWORDS_VERSION', 'v201209');
 
 function _adwords_process($form_state) {
   $form['adwords']['description'] = array(
@@ -77,21 +78,21 @@ function adwords_get_data() {
 	}
   /* Get all the accounts defined in MCC */
   // Get the service, which loads the required classes.
-  $servicedAccountService =
-      $user->GetService('ServicedAccountService', 'v201109');
+  $managedCustomerService =
+      $user->GetService('ManagedCustomerService', ADWORDS_VERSION);
 
   // Create selector.
-  $selector = new ServicedAccountSelector();
-  // To get the links paging must be disabled.
-  $selector->enablePaging = FALSE;
+  $selector = new Selector();
+  // Specify the fields to retrieve.
+  $selector->fields = array('Login', 'CustomerId',  'Name');
 
   // Make the get request.
-  $graph = $servicedAccountService->get($selector);
-  if (isset($graph->accounts)) {
+  $graph = $managedCustomerService->get($selector);
+  if (isset($graph->entries)) {
     $count = count($graph->accounts);
     /* We have some accounts do report definition once */
     // Load the service, so that the required classes are available.
-    $user->LoadService('ReportDefinitionService', 'v201109');
+    $user->LoadService('ReportDefinitionService', ADWORDS_VERSION);
     
     // Create selector.
     $selector = new Selector();
@@ -133,14 +134,16 @@ function adwords_get_data() {
     // Exclude criteria that haven't recieved any impressions over the date range.
     $segmentation_report_definition->includeZeroImpressions = FALSE;
         
-    foreach ($graph->accounts as $index => $account) {
+    foreach ($graph->entries as $index => $account) {
   		/* For each of these do an ad hoc report, getting data in XML and saving to db */
       //$xml .= print_r($account, TRUE);
+      /* Testing
       if ($account->customerId != 9658854421) {
             continue;
         }
+      */
       // Set additional options.
-      $options = array('version' => 'v201109', 'returnMoneyInMicros' => TRUE);
+      $options = array('version' => ADWORDS_VERSION, 'returnMoneyInMicros' => TRUE);
     
       /* Set the client Id for this report */
       $user->SetClientId($account->customerId);
@@ -249,7 +252,7 @@ function adwords_get_data() {
 }
 
 function adwords_login($client_login = null) {
-  $path = dirname(__FILE__) . '/../../libraries/adwords/v201109/src';
+  $path = dirname(__FILE__) . '/../../libraries/adwords/src/';
   set_include_path(get_include_path() . PATH_SEPARATOR . $path);
 
   require_once 'Google/Api/Ads/AdWords/Lib/AdWordsUser.php';

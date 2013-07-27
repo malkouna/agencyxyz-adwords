@@ -178,7 +178,7 @@ function _adwords_daily_totals($client_id, $targets)
         /* Take one month off $campaign_date */
         $campaign_date = date("Y-m-01", strtotime('last month'));
         /* And make $day_of_month end day of that month ('t' is number of days in month */
-        $day_of_month = date('j', strtotime($reporting_start));
+        $day_of_month = date('j', strtotime($yesterday));
 
     }
 
@@ -246,13 +246,7 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
         $end_date = date("Y-m-d");
     }
 
-    /* if we're at the start of the month rewind to previous month */
-    if (date('j', strtotime($end_date)) == 1) {
-        $start_date = date("Y-m-01", strtotime('last month', $start_date));
-        $end_date = date("Y-m-d", strtotime('last month', $end_date));
-    }
-
-    // Get and display all notes for this client
+     // Get and display all notes for this client
     $query = db_query("
       SELECT *
       FROM adwords_daily_note adn
@@ -281,23 +275,41 @@ function adwords_daily_traffic($client_id, $start_date = NULL, $end_date = NULL)
 
     // Now theme the results
     $output = theme('adwords_notes', $notes);
-    if (user_access('administer adwords')) {
-        $output .= l(t('Edit Columns'), 'adwords/daily/detail/' . $client_id . '/configure');
-    }
 
-    $output .= theme('adwords_results', $results['rows'], $results['totals'], $client_id);
 
     /* @AM 09/04/2012 Show last months details as well */
     $archive_start_date = date('Y-m-d', strtotime("-1 month", strtotime($start_date)));
     ;
     $archive_end_date = date('Y-m-d', strtotime("-1 day", strtotime($start_date)));
     $archive_results = adwords_daily_traffic_calc($client_id, $result->name, $archive_start_date, $archive_end_date);
+  // Get and display all notes for this client
+  $archive_notes_query = db_query("
+      SELECT *
+      FROM adwords_daily_note adn
+      WHERE client_id = %d
+      AND date >= '%s'
+      AND date <= '%s'
+      ORDER BY date", $client_id, $archive_start_date, $archive_end_date
+  );
+  $order = 0;
+  while($note = db_fetch_array($archive_notes_query)) {
+       $note['zebra'] = $order %2==0?'odd':'even';
+       $archive_notes[] = $note;
+       $order++;
+     }    
+  
     $output .= '
   	<fieldset class="collapsible collapsed">
     	<legend>Last Month Overview</legend>' .
+	  theme('adwords_notes', $archive_notes) .		
         theme('adwords_results', $archive_results['rows'], $archive_results['totals'], $client_id) .
         '</fieldset>';
 
+  if (user_access('administer adwords')) {
+    $output .= l(t('Edit Columns'), 'adwords/daily/detail/' . $client_id . '/configure');
+  }
+  $output .= theme('adwords_results', $results['rows'], $results['totals'], $client_id);
+  
     return $output;
 }
 
@@ -417,6 +429,13 @@ function adwords_daily_traffic_calc($client_id, $client_name, $start_date, $end_
     /*
     * @AM 18/3/2011 Now look at data and get actual data
     */
+    $total_clicks = 0.0;
+    $total_imps = 0.0;
+    $total_daily_spend = 0.0;
+    $total_conversions = 0.0;
+    $total_conversion_rate = 0.0;
+    $total_avg_pos = 0.0;
+    $total_cpa = 0.0;
     while ($row = db_fetch_object($query)) {
         $daynum = date("j", strtotime($row->date));
         $rows[$row->date]['imps'] = number_format($row->imps, '0');
@@ -460,13 +479,19 @@ function adwords_daily_traffic_calc($client_id, $client_name, $start_date, $end_
     $totals['date'] = '';
     $totals['imps'] = number_format($total_imps, '0');
     $totals['clicks'] = number_format($total_clicks, '0');
-    $totals['ctr'] = number_format($total_clicks / $total_imps * 100 / ($daynum - 1), '2') . '%';
-    $totals['avg_cpc'] = '$' . number_format($total_daily_spend / ($total_clicks * 1000000), '3');
+    $totals['ctr'] = '';
+    if($total_imps > 0) {
+  	  $totals['ctr'] = number_format($total_clicks/$total_imps*100/$daynum, '2') . '%';
+    }
+    $totals['avg_cpc'] = '';
+    if ($total_clicks > 0) {
+      $totals['avg_cpc'] = '$' . number_format($total_daily_spend / ($total_clicks * 1000000), '3');
+    }
     $totals['daily_spend'] = '$' . number_format($total_daily_spend / 1000000, '0');
     $totals['avg_pos'] = number_format($total_avg_pos / $daynum, '1');
     $totals['conv'] = number_format($total_conversions, '0');
-    $totals['conv_rate'] = number_format($total_conversion_rate * 100 / ($daynum - 1), '2') . '%';
-    $totals['cpa'] = '$' . number_format($total_cpa / (($daynum - 1) * 1000000), '3');
+  	$totals['conv_rate'] = number_format($total_conversion_rate*100/$daynum, '2') . '%';
+  	$totals['cpa'] = '$' . number_format($total_cpa/($daynum*1000000), '3');
     $totals['target_daily_average_clicks'] = number_format($target_monthly_clicks);
 
     $results['totals'] = $totals;
@@ -626,17 +651,22 @@ function adwords_daily_note_submit($form, &$form_state)
 function adwords_archived_data($form_state)
 {
     $output = '<div>Enter in selection criteria and press "Go!" to get archived data.</div>';
-    if (!empty($form_state['storage']['start_date'])) {
-        $output = adwords_daily_traffic($form_state['storage']['client'], $form_state['storage']['start_date'], $form_state['storage']['end_date']);
+    if (!empty($form_state['storage']['month'])) {
+        $start_date = $form_state['storage']['year'] . '-' . $form_state['storage']['month'] . '-01';
+        $end_date = $form_state['storage']['year'] . '-' . $form_state['storage']['month'] . '-' . date("t", strtotime($start_date));
+        $output = adwords_daily_traffic($form_state['storage']['client'], $start_date, $end_date);
     }
+    $clients[''] = '- Select Client -';
     $query = db_query("
-     SELECT td.tid, td.name
+     SELECT td.name, td.description
      FROM {term_data} td
      JOIN {vocabulary} v
      ON td.vid = v.vid
-     AND v.name = 'Clients'");
+     AND v.name = 'Clients'
+     WHERE td.description != ''
+     ORDER BY LOWER(td.name)");
     while ($client = db_fetch_array($query)) {
-        $clients[$client['tid']] = $client['name'];
+        $clients[$client['description']] = $client['name'];
     }
     $form['client'] = array(
         '#type' => 'select',
@@ -644,16 +674,36 @@ function adwords_archived_data($form_state)
         '#options' => $clients,
     );
 
-    $form['start_date'] = array(
-        '#type' => 'date_popup',
-        '#title' => t('Start Date'),
-        '#date_format' => DATE_FORMAT_DATE,
+    $form['month'] = array(
+        '#type' => 'select',
+        '#title' => t('Date'),
+        '#options' => array(
+            '' => '- Select Month -',
+            '01' => 'January',
+            '02' => 'February',
+            '03' => 'March',
+            '04' => 'April',
+            '05' => 'May',
+            '06' => 'June',
+            '07' => 'July',
+            '08' => 'August',
+            '09' => 'September',
+            '10' => 'October',
+            '11' => 'November',
+            '12' => 'December',
+        ),
     );
 
-    $form['end_date'] = array(
-        '#type' => 'date_popup',
-        '#title' => t('End Date'),
-        '#date_format' => DATE_FORMAT_DATE,
+    $years[''] = '- Select Year -';
+    $current_year = date('Y');
+    for($i=2010; $i<= $current_year; $i++) {
+        $years[$i] = $i;
+    }
+
+    $form['year'] = array(
+        '#type' => 'select',
+        '#options' => $years,
+        '#description' => t('Select the month and year for which you want to view statistics.'),
     );
 
     $form['submit'] = array(
@@ -673,7 +723,6 @@ function adwords_archived_data_submit($form, &$form_state)
     // Save data in storage and let redirect to itself
     // print_r($form);
     $form_state['storage']['client'] = $form['client']['#value'];
-    $form_state['storage']['start_date'] = $form['start_date']['#value']['date'];
-    $form_state['storage']['end_date'] = $form['end_date']['#value']['date'];
-
+    $form_state['storage']['month'] = $form['month']['#value'];
+    $form_state['storage']['year'] = $form['year']['#value'];
 }
