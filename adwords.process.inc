@@ -44,7 +44,7 @@ $segmentation_data = array(
 define('FIELDS', serialize($fields));
 define('SEGMENTATION_FIELDS', serialize($segmentation_fields));
 define('SEGMENTATION_DATA', serialize($segmentation_data));
-define('ADWORDS_VERSION', 'v201209');
+define('ADWORDS_VERSION', 'v201306');
 
 function _adwords_process($form_state) {
   $form['adwords']['description'] = array(
@@ -146,7 +146,7 @@ function adwords_get_data() {
       $options = array('version' => ADWORDS_VERSION, 'returnMoneyInMicros' => TRUE);
     
       /* Set the client Id for this report */
-      $user->SetClientId($account->customerId);
+      $user->SetClientCustomerId($account->customerId);
       /* Validate report before downloading */
       // Download report. Set second param $file to null to get xml directly
       $vars = array(
@@ -260,12 +260,14 @@ function adwords_login($client_login = null) {
 
   $ini_file = variable_get('adwords_sandbox', 1) == 1?'settings-sandbox.ini':'settings.ini';
   $ini_file = dirname(__FILE__) . '/' . $ini_file;
+  /* Need to force local auth file so OAUTH2 isn't used */
+  $auth_file = dirname(__FILE__) . '/auth.ini';
   $developer_token = variable_get('adwords_sandbox', 1) == 1?variable_get('adwords_email_address', '') . '++AUD':'5AYQ2vWZgg7pKsE8RjB73g';
   try {
     // Get AdWordsUser from credentials in "../auth.ini"
     // relative to the AdWordsUser.php file's directory.
     $user = new AdWordsUser(
-      null,
+      $auth_file,
       variable_get('adwords_email_address', ''),
       variable_get('adwords_password', ''),
       $developer_token,
