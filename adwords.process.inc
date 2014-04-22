@@ -44,7 +44,7 @@ $segmentation_data = array(
 define('FIELDS', serialize($fields));
 define('SEGMENTATION_FIELDS', serialize($segmentation_fields));
 define('SEGMENTATION_DATA', serialize($segmentation_data));
-define('ADWORDS_VERSION', 'v201306');
+define('ADWORDS_VERSION', 'v201309');
 
 function _adwords_process($form_state) {
   $form['adwords']['description'] = array(
