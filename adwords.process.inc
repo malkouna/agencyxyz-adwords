@@ -48,7 +48,7 @@ define('ADWORDS_VERSION', 'v201309');
 
 function _adwords_process($form_state) {
   $form['adwords']['description'] = array(
-    '#value' => t('<div>Use the "Process" button below to retrieve email reports and populate the database.</div>'),
+    '#value' => t('<div>Use the "Process" button below to login to adwords and populate the database.</div>'),
   );
   
   $form['adwords']['process'] = array(
@@ -252,7 +252,7 @@ function adwords_get_data() {
 }
 
 function adwords_login($client_login = null) {
-  $path = dirname(__FILE__) . '/../../libraries/adwords/src/';
+  $path = dirname(__FILE__) . '/../../libraries/adwords/lib/';
   set_include_path(get_include_path() . PATH_SEPARATOR . $path);
 
   require_once 'Google/Api/Ads/AdWords/Lib/AdWordsUser.php';
