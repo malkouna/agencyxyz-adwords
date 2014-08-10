@@ -1,65 +1,44 @@
 <?php
-function _adwords_login($form_state) {
+
+function _adwords_login() {
+  adwords_create_adwords_user();
+
+  $form = array();
+
   $form['adwords'] = array(
     '#type' => 'fieldset',
-    '#title' => 'Google AdWords Login Details',
+    '#title' => 'Get Refresh Token (OAuth2) for Google AdWords',
   );
-  $form['adwords']['email'] = array(
+  $form['adwords']['adwords_client_id'] = array(
     '#type' => 'textfield',
-    '#title' => t('Email'),
+    '#title' => t('Client Id'),
+    '#default_value' => variable_get('adwords_client_id', ADWORDS_CLIENT_ID),
   );
-  
-  $form['adwords']['password'] = array(
-    '#type' => 'password',
-    '#title' => t('Password'),
+
+  $form['adwords']['adwords_client_secret'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Client Secret/'),
+    '#default_value' => variable_get('adwords_client_secret', ADWORDS_CLIENT_SECRET),
   );
-  
-  $form['adwords']['login'] = array(
-    '#type' => 'submit',
-    '#value' => t('Login'),
-    '#submit' => array(_adwords_login_submit),
+
+  $form['adwords']['adwords_developer_token'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Developer Token'),
+    '#default_value' => variable_get('adwords_developer_token', ADWORDS_DEVELOPER_TOKEN),
   );
-  return $form;
+
+  $form['adwords']['adwords_user_agent'] = array(
+    '#type' => 'textfield',
+    '#title' => t('User Agent'),
+    '#default_value' => variable_get('adwords_user_agent', ADWORDS_USER_AGENT),
+  );
+
+  $form['adwords']['adwords_refresh_token'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Refresh Token'),
+    '#default_value' => variable_get('adwords_refresh_token', ADWORDS_REFRESH_TOKEN),
+  );
+
+  return system_settings_form($form);
 }
 
-function _adwords_login_submit(&$form, &$form_state) {
-  // print_r($form);
-  require_once 'src/Google/Api/Ads/AdWords/Lib/AdWordsUser.php';
-  // drupal_set_message('arg_separator.output=' . ini_get('arg_separator.output'), 'status', false);
-  ini_set('arg_separator.output', '&');
-
-  try {
-    // Get AdWordsUser from credentials in "../auth.ini"
-    // relative to the AdWordsUser.php file's directory.
-    $adworduser = new AdWordsUser();
-    
-    // save this in the session for later
-    $_SESSION['adworduser'] = true;
-  
-    // Log SOAP XML request and response.
-    $adworduser->LogDefaults();
-  
-    // Got to here can redirect to client list
-    $form['#redirect'] = 'adwords/clients';
-//    // Get the CampaignService.
-//    $campaignService = $adworduser->GetCampaignService('v200909');
-//  
-//    // Create selector.
-//    $selector = new CampaignSelector();
-//  
-//    // Get all campaigns.
-//    $page = $campaignService->get($selector);
-//  
-//    // Display campaigns.
-//    if (isset($page->entries)) {
-//      foreach ($page->entries as $campaign) {
-//        drupal_set_message('Campaign with name "' . $campaign->name . '" and id "'
-//            . $campaign->id . "\" was found.", 'status', false);
-//      }
-//    } else {
-//      drupal_set_message("No campaigns were found.", 'status', false);
-//    }
-  } catch (Exception $e) {
-    drupal_set_message(print_r($e), 'error', false);
-  }
-}

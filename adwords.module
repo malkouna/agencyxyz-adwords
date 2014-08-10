@@ -4,6 +4,11 @@
  * This module contains a list of helper functions for the Agency XYZ
  * website.
  */
+define('ADWORDS_CLIENT_ID', '699903905540-7utfp4ogds1rh5s50vp3olfl65c0tslj.apps.googleusercontent.com');
+define('ADWORDS_CLIENT_SECRET', 'aM2as7dmnD8ePSwvQXr2qU5m');
+define('ADWORDS_DEVELOPER_TOKEN', '5AYQ2vWZgg7pKsE8RjB73g');
+define('ADWORDS_USER_AGENT', 'Agency XYZ');
+define('ADWORDS_REFRESH_TOKEN', '1/3rRr6ddfm4q400CVgtELA9CB7GoqIKL0JHD-zKgUVUU');
 
 /**
  * Implement hook_perm().
@@ -290,4 +295,34 @@ function adwords_cron() {
 	include_once 'adwords.process.inc';
 	// @AM 8/2/2012 changed to access API adwords_process_emails();
 	adwords_get_data();
+}
+
+
+function adwords_create_adwords_user(){
+  $path = dirname(__FILE__) . '/../../libraries/adwords/lib/';
+  set_include_path(get_include_path() . PATH_SEPARATOR . $path);
+
+  require_once 'Google/Api/Ads/AdWords/Lib/AdWordsUser.php';
+
+  $oauth2_info = array(
+    'client_id' => variable_get('adwords_client_id', ADWORDS_CLIENT_ID),
+    'client_secret' => variable_get('adwords_client_secret', ADWORDS_CLIENT_SECRET),
+    'refresh_token' => variable_get('adwords_refresh_token', ADWORDS_REFRESH_TOKEN)
+  );
+
+  try {
+    // See AdWordsUser constructor
+    $user = new AdWordsUser(NULL, NULL, NULL, ADWORDS_DEVELOPER_TOKEN, NULL, ADWORDS_USER_AGENT,
+      NULL, NULL, NULL, $oauth2_info);
+
+    $user->LogAll();
+    $customerService = $user->GetService("CustomerService");
+    $customer = $customerService->get();
+    drupal_set_message("You are logged in as customer: $customer->customerId");
+
+    return $user;
+  }
+  catch (Exception $e) {
+    drupal_set_message("An exception has occurred trying to login to AdWords: $e->getMessage()");
+  }
 }
