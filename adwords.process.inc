@@ -1,8 +1,5 @@
 <?php
 
-$src_path = drupal_get_path('module', 'adwords') . '/src/agencyxyz';
-require_once $src_path . '/AdWords.php';
-
 $fields = array(
   'Date' => array('dbcolumn' => 'date', 'xmlfield' => 'day'),
   'AccountDescriptiveName' => array('dbcolumn' => 'acctname', 'xmlfield' => 'account'),  
@@ -48,7 +45,7 @@ $segmentation_data = array(
 define('FIELDS', serialize($fields));
 define('SEGMENTATION_FIELDS', serialize($segmentation_fields));
 define('SEGMENTATION_DATA', serialize($segmentation_data));
-define('ADWORDS_VERSION', 'v201309');
+define('ADWORDS_VERSION', 'v201406');
 
 function _adwords_process($form_state) {
   $form['adwords']['description'] = array(
@@ -147,7 +144,7 @@ function adwords_get_data() {
         }
       */
       // Set additional options.
-      $options = array('version' => ADWORDS_VERSION, 'returnMoneyInMicros' => TRUE);
+      $options = array('version' => ADWORDS_VERSION);
     
       /* Set the client Id for this report */
       $user->SetClientCustomerId($account->customerId);
@@ -166,15 +163,19 @@ function adwords_get_data() {
             $values = null;
             // insert each row
             foreach ($row->attributes() as $attribute => $value) {
-              $columns[] = $mappings[$attribute];
-              if(isset($formats[$attribute])) {
-                if ($formats[$attribute] == 'percentage') {
-                  /* will get string '2.08%', want value 0.028 */
-                  $value = str_replace('%', '', $value);
-                  $value = $value/100.0;
+              if(isset($mappings[$attribute])) {
+                $columns[] = $mappings[$attribute];
+
+                if (isset($formats[$attribute])) {
+                  if ($formats[$attribute] == 'percentage') {
+                    /* will get string '2.08%', want value 0.028 */
+                    $value = str_replace('%', '', $value);
+                    $value = $value / 100.0;
+                  }
                 }
+
+                $values[$attribute] = "'" . (string)$value . "'";
               }
-              $values[$attribute] = "'" . (string)$value . "'";
             }
             $column_statement = implode(',', $columns);
             $value_statement = implode(',', $values); 
