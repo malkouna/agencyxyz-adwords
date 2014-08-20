@@ -197,10 +197,10 @@ function adwords_get_data() {
           if(isset($segmentation_xml->table->row)) {
             foreach($segmentation_xml->table->row as $conversion_row) {
               $column = (string)$conversion_row['conversionTrackingPurpose'];
-              $sql = "UPDATE {adwords_data} SET " . $segmentation_data[(string)$conversion_row['conversionTrackingPurpose']] . " = '%s' WHERE date = '%s' AND acctname = '%s'";
+              $sql = "UPDATE {adwords_data} SET " . $segmentation_data[(string)$conversion_row['conversionCategory']] . " = '%s' WHERE date = '%s' AND acctname = '%s'";
               /* Run query */
               db_query($sql, 
-                (string)$conversion_row['conv1PerClick'],
+                (string)$conversion_row['convertedClicks'],
                 (string)$conversion_row['day'],
                 (string)$conversion_row['account']
               );
