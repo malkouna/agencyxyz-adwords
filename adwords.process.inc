@@ -11,9 +11,9 @@ $fields = array(
   'AverageCpc' => array('dbcolumn' => 'cpc', 'xmlfield' => 'avgCPC'), 
   'Cost' => array('dbcolumn' => 'cost', 'xmlfield' => 'cost'), 
   'AveragePosition' => array('dbcolumn' => 'pos', 'xmlfield' => 'avgPosition'), 
-  'Conversions' => array('dbcolumn' => 'conv', 'xmlfield' => 'conv1PerClick'), 
-  'ConversionRate' => array('dbcolumn' => 'convRate', 'xmlfield' => 'convRate1PerClick', 'format' => 'percentage'),
-  'CostPerConversion' => array('dbcolumn' => 'costPerConv', 'xmlfield' => 'costConv1PerClick'),
+  'Conversions' => array('dbcolumn' => 'conv', 'xmlfield' => 'convertedClicks'),
+  'ConversionRate' => array('dbcolumn' => 'convRate', 'xmlfield' => 'clickConversionRate', 'format' => 'percentage'),
+  'CostPerConversion' => array('dbcolumn' => 'costPerConv', 'xmlfield' => 'costConvertedClick'),
   /* 'SalesCount' => array('dbcolumn' => 'purchases', 'xmlfield' => 'salesConvManyPerClick'),
   'PageViewCount' => array('dbcolumn' => 'pageviews', 'xmlfield' => 'pageViewConvManyPerClick'),
   'LeadCount' => array('dbcolumn' => 'leads', 'xmlfield' => 'leadsConvManyPerClick'),
@@ -206,7 +206,7 @@ function adwords_get_data() {
               );
             }
           }
-          watchdog('adwords', t('Report data updated: !index of !count successful for account !account', $vars));
+          watchdog('adwords', t('Report data updated: !indecFx of !count successful for account !account', $vars));
         }
       } catch (Exception $e) {
         $vars['!exception'] = $e->getMessage;
