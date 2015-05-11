@@ -11,14 +11,9 @@ $fields = array(
   'AverageCpc' => array('dbcolumn' => 'cpc', 'xmlfield' => 'avgCPC'), 
   'Cost' => array('dbcolumn' => 'cost', 'xmlfield' => 'cost'), 
   'AveragePosition' => array('dbcolumn' => 'pos', 'xmlfield' => 'avgPosition'), 
-  'Conversions' => array('dbcolumn' => 'conv', 'xmlfield' => 'convertedClicks'),
-  'ConversionRate' => array('dbcolumn' => 'convRate', 'xmlfield' => 'clickConversionRate', 'format' => 'percentage'),
-  'CostPerConversion' => array('dbcolumn' => 'costPerConv', 'xmlfield' => 'costConvertedClick'),
-  /* 'SalesCount' => array('dbcolumn' => 'purchases', 'xmlfield' => 'salesConvManyPerClick'),
-  'PageViewCount' => array('dbcolumn' => 'pageviews', 'xmlfield' => 'pageViewConvManyPerClick'),
-  'LeadCount' => array('dbcolumn' => 'leads', 'xmlfield' => 'leadsConvManyPerClick'),
-  'SignupCount' => array('dbcolumn' => 'signups', 'xmlfield' => 'signUpConvManyPerClick'),
-  'OtherConversionCount' => array('dbcolumn' => 'defaultConv', 'xmlfield' => 'otherConvManyPerClick'), */
+  'ConvertedClicks' => array('dbcolumn' => 'conv', 'xmlfield' => 'convertedClicks'),
+  'ClickConversionRate' => array('dbcolumn' => 'convRate', 'xmlfield' => 'clickConversionRate', 'format' => 'percentage'),
+  'CostPerConvertedClick' => array('dbcolumn' => 'costPerConv', 'xmlfield' => 'costConvertedClick'),
 );
 
 $segmentation_fields = array(
@@ -30,7 +25,7 @@ $segmentation_fields = array(
    * See http://code.google.com/apis/adwords/docs/reportguide.html#conversion_metrics
    */
   'ConversionCategoryName' => array(),
-  'Conversions' => array(),
+  'ConvertedClicks' => array(),
   'ConversionValue' => array(),
 );
 
@@ -45,7 +40,7 @@ $segmentation_data = array(
 define('FIELDS', serialize($fields));
 define('SEGMENTATION_FIELDS', serialize($segmentation_fields));
 define('SEGMENTATION_DATA', serialize($segmentation_data));
-define('ADWORDS_VERSION', 'v201406');
+define('ADWORDS_VERSION', 'v201502');
 
 function _adwords_process($form_state) {
   $form['adwords']['description'] = array(
@@ -85,7 +80,7 @@ function adwords_get_data() {
   // Create selector.
   $selector = new Selector();
   // Specify the fields to retrieve.
-  $selector->fields = array('Login', 'CustomerId',  'Name');
+  $selector->fields = array('CustomerId',  'Name');
 
   // Make the get request.
   $graph = $managedCustomerService->get($selector);
@@ -94,7 +89,7 @@ function adwords_get_data() {
     /* We have some accounts do report definition once */
     // Load the service, so that the required classes are available.
     $user->LoadService('ReportDefinitionService', ADWORDS_VERSION);
-    
+
     // Create selector.
     $selector = new Selector();
     $segmentation_selector = new Selector();
@@ -121,9 +116,9 @@ function adwords_get_data() {
     $reportDefinition->reportType = 'ACCOUNT_PERFORMANCE_REPORT';
     $reportDefinition->downloadFormat = 'XML';
   
-    // Exclude criteria that haven't recieved any impressions over the date range.
+    // Exclude criteria that haven't received any impressions over the date range.
     $reportDefinition->includeZeroImpressions = FALSE;
-    
+
     // Create report definition.
     $segmentation_report_definition = new ReportDefinition();
     $segmentation_report_definition->selector = $segmentation_selector;

@@ -299,7 +299,7 @@ function adwords_cron() {
 
 
 function adwords_create_adwords_user(){
-  $path = dirname(__FILE__) . '/../../libraries/adwords/lib/';
+  $path = dirname(__FILE__) . '/../../libraries/adwords/src/';
   set_include_path(get_include_path() . PATH_SEPARATOR . $path);
 
   require_once 'Google/Api/Ads/AdWords/Lib/AdWordsUser.php';
@@ -312,12 +312,13 @@ function adwords_create_adwords_user(){
 
   try {
     // See AdWordsUser constructor
-    $user = new AdWordsUser(NULL, NULL, NULL, ADWORDS_DEVELOPER_TOKEN, NULL, ADWORDS_USER_AGENT,
-      NULL, NULL, NULL, $oauth2_info);
+    $user = new AdWordsUser(NULL, ADWORDS_DEVELOPER_TOKEN, NULL, ADWORDS_USER_AGENT,
+      NULL, NULL, $oauth2_info);
 
     $user->LogAll();
     $customerService = $user->GetService("CustomerService");
     $customer = $customerService->get();
+    $user->SetClientCustomerId($customer->customerId);
     drupal_set_message("You are logged in as customer: $customer->customerId");
 
     return $user;
