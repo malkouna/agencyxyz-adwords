@@ -2,15 +2,15 @@
 
 $fields = array(
   'Date' => array('dbcolumn' => 'date', 'xmlfield' => 'day'),
-  'AccountDescriptiveName' => array('dbcolumn' => 'acctname', 'xmlfield' => 'account'),  
-  'ExternalCustomerId' => array('dbcolumn' => 'customerid', 'xmlfield' => 'customerID'), 
+  'AccountDescriptiveName' => array('dbcolumn' => 'acctname', 'xmlfield' => 'account'),
+  'ExternalCustomerId' => array('dbcolumn' => 'customerid', 'xmlfield' => 'customerID'),
   'AccountCurrencyCode' => array('dbcolumn' => 'currCode', 'xmlfield' => 'currency'),
-  'Impressions' => array('dbcolumn' => 'imps', 'xmlfield' => 'impressions'), 
-  'Clicks' => array('dbcolumn' => 'clicks', 'xmlfield' => 'clicks'), 
-  'Ctr' => array('dbcolumn' => 'ctr', 'xmlfield' => 'ctr', 'format' => 'percentage'), 
-  'AverageCpc' => array('dbcolumn' => 'cpc', 'xmlfield' => 'avgCPC'), 
-  'Cost' => array('dbcolumn' => 'cost', 'xmlfield' => 'cost'), 
-  'AveragePosition' => array('dbcolumn' => 'pos', 'xmlfield' => 'avgPosition'), 
+  'Impressions' => array('dbcolumn' => 'imps', 'xmlfield' => 'impressions'),
+  'Clicks' => array('dbcolumn' => 'clicks', 'xmlfield' => 'clicks'),
+  'Ctr' => array('dbcolumn' => 'ctr', 'xmlfield' => 'ctr', 'format' => 'percentage'),
+  'AverageCpc' => array('dbcolumn' => 'cpc', 'xmlfield' => 'avgCPC'),
+  'Cost' => array('dbcolumn' => 'cost', 'xmlfield' => 'cost'),
+  'AveragePosition' => array('dbcolumn' => 'pos', 'xmlfield' => 'avgPosition'),
   'ConvertedClicks' => array('dbcolumn' => 'conv', 'xmlfield' => 'convertedClicks'),
   'ClickConversionRate' => array('dbcolumn' => 'convRate', 'xmlfield' => 'clickConversionRate', 'format' => 'percentage'),
   'CostPerConvertedClick' => array('dbcolumn' => 'costPerConv', 'xmlfield' => 'costConvertedClick'),
@@ -18,8 +18,8 @@ $fields = array(
 
 $segmentation_fields = array(
   'Date' => array('dbcolumn' => 'date', 'xmlfield' => 'day'),
-  'AccountDescriptiveName' => array('dbcolumn' => 'acctname', 'xmlfield' => 'account'),  
-  'ExternalCustomerId' => array('dbcolumn' => 'customerid', 'xmlfield' => 'customerID'), 
+  'AccountDescriptiveName' => array('dbcolumn' => 'acctname', 'xmlfield' => 'account'),
+  'ExternalCustomerId' => array('dbcolumn' => 'customerid', 'xmlfield' => 'customerID'),
   'AccountCurrencyCode' => array('dbcolumn' => 'currCode', 'xmlfield' => 'currency'),
   /* Add the ConversionCategoryName field to get other metrics.
    * See http://code.google.com/apis/adwords/docs/reportguide.html#conversion_metrics
@@ -40,24 +40,23 @@ $segmentation_data = array(
 define('FIELDS', serialize($fields));
 define('SEGMENTATION_FIELDS', serialize($segmentation_fields));
 define('SEGMENTATION_DATA', serialize($segmentation_data));
-define('ADWORDS_VERSION', 'v201502');
 
 function _adwords_process($form_state) {
   $form['adwords']['description'] = array(
     '#value' => t('<div>Use the "Process" button below to login to adwords and populate the database.</div>'),
   );
-  
+
   $form['adwords']['process'] = array(
     '#type' => 'submit',
     '#value' => t('Process'),
     '#submit' => array(_adwords_process_submit),
   );
-  
+
   $form['adwords']['result'] = array(
     '#type' => 'markup',
     '#value' => $form_state['storage']['result'],
   );
-  
+
   return $form;
 }
 
@@ -67,7 +66,7 @@ function _adwords_process_submit(&$form, &$form_state) {
 
 function adwords_get_data() {
   /* Log into adwords, no client_login as it's over the entire MCC */
-    $user = adwords_create_adwords_user();
+  $user = adwords_create_adwords_user();
 	if (!$user) {
 		watchdog('adwords', t('Cannot log into AdWords server'), NULL, WATCHDOG_ERROR);
 		return;
@@ -93,11 +92,11 @@ function adwords_get_data() {
     // Create selector.
     $selector = new Selector();
     $segmentation_selector = new Selector();
-    
+
     $fields = unserialize(FIELDS);
     $segmentation_fields = unserialize(SEGMENTATION_FIELDS);
     $segmentation_data = unserialize(SEGMENTATION_DATA);
-    
+
     foreach($fields as $field) {
       $mappings[$field['xmlfield']] = $field['dbcolumn'];
       if(isset($field['format'])) {
@@ -107,7 +106,7 @@ function adwords_get_data() {
     $selector->fields = array_keys($fields);
     $segmentation_selector->fields = array_keys($segmentation_fields);
 
-    
+
     // Create report definition.
     $reportDefinition = new ReportDefinition();
     $reportDefinition->selector = $selector;
@@ -115,7 +114,7 @@ function adwords_get_data() {
     $reportDefinition->dateRangeType = 'LAST_30_DAYS';
     $reportDefinition->reportType = 'ACCOUNT_PERFORMANCE_REPORT';
     $reportDefinition->downloadFormat = 'XML';
-  
+
     // Exclude criteria that haven't received any impressions over the date range.
     $reportDefinition->includeZeroImpressions = FALSE;
 
@@ -126,10 +125,10 @@ function adwords_get_data() {
     $segmentation_report_definition->dateRangeType = 'LAST_30_DAYS';
     $segmentation_report_definition->reportType = 'ACCOUNT_PERFORMANCE_REPORT';
     $segmentation_report_definition->downloadFormat = 'XML';
-  
+
     // Exclude criteria that haven't recieved any impressions over the date range.
     $segmentation_report_definition->includeZeroImpressions = FALSE;
-        
+
     foreach ($graph->entries as $index => $account) {
   		/* For each of these do an ad hoc report, getting data in XML and saving to db */
       //$xml .= print_r($account, TRUE);
@@ -140,7 +139,7 @@ function adwords_get_data() {
       */
       // Set additional options.
       $options = array('version' => ADWORDS_VERSION);
-    
+
       /* Set the client Id for this report */
       $user->SetClientCustomerId($account->customerId);
       /* Validate report before downloading */
@@ -173,7 +172,7 @@ function adwords_get_data() {
               }
             }
             $column_statement = implode(',', $columns);
-            $value_statement = implode(',', $values); 
+            $value_statement = implode(',', $values);
             // Data comes with single quotes surrounding the values and db_query tries to escape them
             // so build up queries with concatenation rather than best practice of passing parameters.
             // Key for the data is the acctname and date so delete this row first
@@ -183,8 +182,8 @@ function adwords_get_data() {
                 AND customerid = " . $values['customerID']);
             // Now insert
             $insert = "INSERT INTO {adwords_data} (" . $column_statement . ") VALUES (" . $value_statement . ")";
-            db_query($insert); 
-            
+            db_query($insert);
+
           }
           /* Get segmenation data as well */
           $segmentation_xml = new SimpleXMLElement(ReportUtils::DownloadReport($segmentation_report_definition, NULL, $user, $options));
@@ -194,7 +193,7 @@ function adwords_get_data() {
               $column = (string)$conversion_row['conversionTrackingPurpose'];
               $sql = "UPDATE {adwords_data} SET " . $segmentation_data[(string)$conversion_row['conversionCategory']] . " = '%s' WHERE date = '%s' AND acctname = '%s'";
               /* Run query */
-              db_query($sql, 
+              db_query($sql,
                 (string)$conversion_row['convertedClicks'],
                 (string)$conversion_row['day'],
                 (string)$conversion_row['account']
@@ -205,7 +204,7 @@ function adwords_get_data() {
         }
       } catch (Exception $e) {
         $vars['!exception'] = $e->getMessage;
-        watchdog('adwords', t('Report !index of !count for account !account generated exception !exception', $vars)); 
+        watchdog('adwords', t('Report !index of !count for account !account generated exception !exception', $vars));
       }
     }
   }
@@ -237,7 +236,7 @@ function adwords_get_data() {
     ON ad.customerid = td.description
     AND ad.acctname = td.name
     WHERE td.name IS NULL");
-  
+
   db_query("
     INSERT INTO {term_hierarchy}
     SELECT DISTINCT td.tid, 0 as parent
@@ -245,8 +244,8 @@ function adwords_get_data() {
     LEFT OUTER JOIN {term_hierarchy} th
     ON td.tid = th.tid
     WHERE th.tid IS NULL");
-  
+
   /* @AM 17/07/2012 Delete unused terms */
 
-  
+
 }

@@ -9,6 +9,7 @@ define('ADWORDS_CLIENT_SECRET', 'aM2as7dmnD8ePSwvQXr2qU5m');
 define('ADWORDS_DEVELOPER_TOKEN', '5AYQ2vWZgg7pKsE8RjB73g');
 define('ADWORDS_USER_AGENT', 'Agency XYZ');
 define('ADWORDS_REFRESH_TOKEN', '1/3rRr6ddfm4q400CVgtELA9CB7GoqIKL0JHD-zKgUVUU');
+define('ADWORDS_VERSION', 'v201509');
 
 /**
  * Implement hook_perm().
@@ -59,7 +60,7 @@ function adwords_menu() {
     'access arguments' => array('administer adwords'),
     'file' => 'adwords.process.inc',
     'type' => MENU_NORMAL_ITEM,
-  );  
+  );
   $items['adwords/report'] = array(
     'title' => 'AdWords Client Report',
     'page callback' => 'drupal_get_form',
@@ -67,7 +68,7 @@ function adwords_menu() {
     'access arguments' => array('administer adwords'),
     'file' => 'adwords.report.inc',
     'type' => MENU_NORMAL_ITEM,
-  );  
+  );
   $items['adwords/daily'] = array(
     'title' => 'AdWords Daily Overview',
     'page callback' => 'adwords_daily_overview',
@@ -76,11 +77,11 @@ function adwords_menu() {
     'file' => 'adwords.daily.inc',
     'type' => MENU_NORMAL_ITEM,
   );
-    
+
   $items['adwords/daily/account'] = array(
     'title' => t('My Clients'),
     'page callback' => 'adwords_daily_overview',
-    'page arguments' => array(true),  
+    'page arguments' => array(true),
     'access arguments' => array('access adwords'),
     'file' => 'adwords.daily.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
@@ -93,7 +94,7 @@ function adwords_menu() {
     'file' => 'adwords.daily.inc',
     'type' => MENU_LOCAL_TASK,
   );
-  
+
 
   $items['adwords/daily/detail/%'] = array(
     'title' => 'AdWords Daily Traffic',
@@ -103,7 +104,7 @@ function adwords_menu() {
     'file' => 'adwords.daily.inc',
     'type' => MENU_CALLBACK,
   );
-  
+
   $items['adwords/daily/detail/%/configure'] = array(
     'title' => 'Configure AdWords Daily Traffic Report',
     'page callback' => 'drupal_get_form',
@@ -112,7 +113,7 @@ function adwords_menu() {
     'file' => 'adwords.daily.configure.inc',
     'type' => MENU_CALLBACK,
   );
-  
+
   $items['adwords/budgets/%'] = array(
     'title' => 'AdWords Campaign Budget',
     'page callback' => 'drupal_get_form',
@@ -139,7 +140,7 @@ function adwords_menu() {
     'file' => 'adwords.daily.inc',
     'type' => MENU_CALLBACK,
   );
-  
+
   $items['adwords/daily/note/add/%/%'] = array(
     'title' => 'Add note to report',
     'page callback' => 'drupal_get_form',
@@ -162,7 +163,7 @@ function adwords_menu() {
   	'page arguments' => array('adwords_admin_settings'),
     'access arguments' => array('administer adwords'),
     'file' => 'adwords.admin.inc',
-    'type' => MENU_NORMAL_ITEM,  
+    'type' => MENU_NORMAL_ITEM,
   );
   return $items;
 }
@@ -193,7 +194,7 @@ function adwords_theme() {
     ),
   );
 }
-  
+
 function theme_adwords_daily_traffic_configure($form) {
     // the variable that will hold our form HTML output
     $output = '';
@@ -212,8 +213,8 @@ function theme_adwords_daily_traffic_configure($form) {
         $this_row[] = drupal_render($row['hide']);
         $this_row[] = drupal_render($row['column']);
         $this_row[] = drupal_render($row['title']);
-        
-        
+
+
         // Add the weight field to the row
         // the Javascript to make our table drag and drop will end up hiding this cell
         $this_row[] = drupal_render($row['weight']);
@@ -233,7 +234,7 @@ function theme_adwords_daily_traffic_configure($form) {
     $table_id = 'my_items';
 
     // this function is what brings in the javascript to make our table drag-and-droppable
-    drupal_add_tabledrag($table_id, 'order', 'sibling', 'weight');   
+    drupal_add_tabledrag($table_id, 'order', 'sibling', 'weight');
 
     // over-write the 'my_items' form element with the markup generated from our table
     $form['rows'] = array(
@@ -249,26 +250,26 @@ function theme_adwords_daily_traffic_configure($form) {
 
     return $output;
 }
-	
+
 function adwords_preprocess_adwords_results(&$variables) {
   /*
    * Get column order, show/hide and titles, first for the client
    * otherwise use defaults (client 0)
    */
   $query = db_query("
-    SELECT * 
-    FROM adwords_report_columns 
+    SELECT *
+    FROM adwords_report_columns
     WHERE client_id = %d
     ORDER BY weight", $variables['client_id']);
   if(db_affected_rows() == 0) {
     /* Get defaults instead */
      $query = db_query("
-      SELECT * 
-      FROM adwords_report_columns 
+      SELECT *
+      FROM adwords_report_columns
       WHERE client_id = 0
       ORDER BY weight");
   }
-  
+
   while ($row = db_fetch_object($query)) {
     if ($row->hide != 1) {
       /* Get header */
@@ -284,8 +285,8 @@ function adwords_preprocess_adwords_results(&$variables) {
   }
   // Get header data out
 //  foreach($variables['results'][0] as $column => $data) {
-//    $headers[] = $column;    
-//  }  
+//    $headers[] = $column;
+//  }
   $variables['headers'] = $headers;
   $variables['results'] = $sorted_results;
   $variables['totals'] = $sorted_totals;
@@ -299,7 +300,7 @@ function adwords_cron() {
 
 
 function adwords_create_adwords_user(){
-  $path = dirname(__FILE__) . '/../../libraries/adwords/src/';
+  $path = dirname(__FILE__) . '/../../libraries/adwords/lib/';
   set_include_path(get_include_path() . PATH_SEPARATOR . $path);
 
   require_once 'Google/Api/Ads/AdWords/Lib/AdWordsUser.php';
@@ -312,7 +313,7 @@ function adwords_create_adwords_user(){
 
   try {
     // See AdWordsUser constructor
-    $user = new AdWordsUser(NULL, ADWORDS_DEVELOPER_TOKEN, NULL, ADWORDS_USER_AGENT,
+    $user = new AdWordsUser(NULL, ADWORDS_DEVELOPER_TOKEN, ADWORDS_USER_AGENT,
       NULL, NULL, $oauth2_info);
 
     $user->LogAll();
