@@ -4,11 +4,11 @@
  * This module contains a list of helper functions for the Agency XYZ
  * website.
  */
-define('ADWORDS_CLIENT_ID', '699903905540-7utfp4ogds1rh5s50vp3olfl65c0tslj.apps.googleusercontent.com');
-define('ADWORDS_CLIENT_SECRET', 'aM2as7dmnD8ePSwvQXr2qU5m');
+define('ADWORDS_CLIENT_ID', '3663958987-2e3vhqsu45b7pjbaobtta75jl8ovdq1m.apps.googleusercontent.com');
+define('ADWORDS_CLIENT_SECRET', 'wOEhkPr20aXDwznrH_AOcu_v');
 define('ADWORDS_DEVELOPER_TOKEN', '5AYQ2vWZgg7pKsE8RjB73g');
 define('ADWORDS_USER_AGENT', 'Agency XYZ');
-define('ADWORDS_REFRESH_TOKEN', '1/3rRr6ddfm4q400CVgtELA9CB7GoqIKL0JHD-zKgUVUU');
+define('ADWORDS_REFRESH_TOKEN', '1/YblH0wTcaH0wRs93cQjLyY26ihwO3jmPaXajUW_skQRIgOrJDtdun6zK6XiATCKT');
 define('ADWORDS_VERSION', 'v201509');
 
 /**
@@ -325,6 +325,7 @@ function adwords_create_adwords_user(){
     return $user;
   }
   catch (Exception $e) {
-    drupal_set_message("An exception has occurred trying to login to AdWords: $e->getMessage()");
+    watchdog('adwords', t('An exception has occurred trying to login to AdWords: @message', array('@message' => $e->getMessage())), NULL, WATCHDOG_ERROR);
+    drupal_set_message(t('An exception has occurred trying to login to AdWords: @message', array('@message' => $e->getMessage())));
   }
 }
