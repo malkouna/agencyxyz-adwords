@@ -165,6 +165,21 @@ function adwords_menu() {
     'file' => 'adwords.admin.inc',
     'type' => MENU_NORMAL_ITEM,
   );
+  $items['admin/reports/adwords-customer-list'] = array(
+    'title' => 'AdWords Customer List',
+    'page callback' => 'adwords_company_list_report',
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/reports/adwords-customer-detail/%'] = array(
+    'title' => 'AdWords Customer List',
+    'page callback' => 'adwords_company_detail_report',
+    'page arguments' => array(3),
+    'access arguments' => array('administer adwords'),
+    'file' => 'adwords.process.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
   return $items;
 }
 
