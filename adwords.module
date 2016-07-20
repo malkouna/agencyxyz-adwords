@@ -9,7 +9,7 @@ define('ADWORDS_CLIENT_SECRET', 'wOEhkPr20aXDwznrH_AOcu_v');
 define('ADWORDS_DEVELOPER_TOKEN', '5AYQ2vWZgg7pKsE8RjB73g');
 define('ADWORDS_USER_AGENT', 'Agency XYZ');
 define('ADWORDS_REFRESH_TOKEN', '1/YblH0wTcaH0wRs93cQjLyY26ihwO3jmPaXajUW_skQRIgOrJDtdun6zK6XiATCKT');
-define('ADWORDS_VERSION', 'v201509');
+define('ADWORDS_VERSION', 'v201605');
 
 /**
  * Implement hook_perm().
