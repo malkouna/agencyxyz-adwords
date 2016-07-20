@@ -10,6 +10,7 @@ define('ADWORDS_DEVELOPER_TOKEN', '5AYQ2vWZgg7pKsE8RjB73g');
 define('ADWORDS_USER_AGENT', 'Agency XYZ');
 define('ADWORDS_REFRESH_TOKEN', '1/YblH0wTcaH0wRs93cQjLyY26ihwO3jmPaXajUW_skQRIgOrJDtdun6zK6XiATCKT');
 define('ADWORDS_VERSION', 'v201605');
+define('ADWORDS_UTIL_VERSION_PATH', 'Google/Api/Ads/AdWords/Util/' . ADWORDS_VERSION);
 
 /**
  * Implement hook_perm().
@@ -319,6 +320,7 @@ function adwords_create_adwords_user(){
   set_include_path(get_include_path() . PATH_SEPARATOR . $path);
 
   require_once 'Google/Api/Ads/AdWords/Lib/AdWordsUser.php';
+  require_once ADWORDS_UTIL_VERSION_PATH . '/ReportUtils.php';
 
   $oauth2_info = array(
     'client_id' => variable_get('adwords_client_id', ADWORDS_CLIENT_ID),

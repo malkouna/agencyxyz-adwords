@@ -150,7 +150,8 @@ function adwords_get_data() {
         '!account' => $account->customerId . ':' . $account->login . ':' . $account->companyName,
       );
       try {
-        $xml = new SimpleXMLElement(ReportUtils::DownloadReport($reportDefinition, NULL, $user, $options));
+        $reportUtils = new ReportUtils();
+        $xml = new SimpleXMLElement($reportUtils->DownloadReport($reportDefinition, NULL, $user, $options));
         if(isset($xml->table->row)) {
           foreach($xml->table->row as $row) {
             $columns = null;
@@ -188,7 +189,7 @@ function adwords_get_data() {
 
           }
           /* Get segmenation data as well */
-          $segmentation_xml = new SimpleXMLElement(ReportUtils::DownloadReport($segmentation_report_definition, NULL, $user, $options));
+          $segmentation_xml = new SimpleXMLElement($reportUtils->DownloadReport($segmentation_report_definition, NULL, $user, $options));
           /* Update values in adwords_data */
           if(isset($segmentation_xml->table->row)) {
             foreach($segmentation_xml->table->row as $conversion_row) {
