@@ -115,9 +115,6 @@ function adwords_get_data() {
     $reportDefinition->reportType = 'ACCOUNT_PERFORMANCE_REPORT';
     $reportDefinition->downloadFormat = 'XML';
 
-    // Exclude criteria that haven't received any impressions over the date range.
-    $reportDefinition->includeZeroImpressions = FALSE;
-
     // Create report definition.
     $segmentation_report_definition = new ReportDefinition();
     $segmentation_report_definition->selector = $segmentation_selector;
@@ -125,9 +122,6 @@ function adwords_get_data() {
     $segmentation_report_definition->dateRangeType = 'LAST_30_DAYS';
     $segmentation_report_definition->reportType = 'ACCOUNT_PERFORMANCE_REPORT';
     $segmentation_report_definition->downloadFormat = 'XML';
-
-    // Exclude criteria that haven't recieved any impressions over the date range.
-    $segmentation_report_definition->includeZeroImpressions = FALSE;
 
     foreach ($graph->entries as $index => $account) {
   		/* For each of these do an ad hoc report, getting data in XML and saving to db */
@@ -138,7 +132,10 @@ function adwords_get_data() {
         }
       */
       // Set additional options.
-      $options = array('version' => ADWORDS_VERSION);
+      $options = array(
+        'version' => ADWORDS_VERSION,
+        'includeZeroImpressions' => FALSE
+      );
 
       /* Set the client Id for this report */
       $user->SetClientCustomerId($account->customerId);
@@ -289,9 +286,6 @@ function adwords_company_detail_report($customer_id) {
   $reportDefinition->reportType = 'ACCOUNT_PERFORMANCE_REPORT';
   $reportDefinition->downloadFormat = 'XML';
 
-  // Exclude criteria that haven't received any impressions over the date range.
-  $reportDefinition->includeZeroImpressions = FALSE;
-
   // Create report definition.
   $segmentation_report_definition = new ReportDefinition();
   $segmentation_report_definition->selector = $segmentation_selector;
@@ -300,10 +294,10 @@ function adwords_company_detail_report($customer_id) {
   $segmentation_report_definition->reportType = 'ACCOUNT_PERFORMANCE_REPORT';
   $segmentation_report_definition->downloadFormat = 'XML';
 
-  // Exclude criteria that haven't recieved any impressions over the date range.
-  $segmentation_report_definition->includeZeroImpressions = FALSE;
-
-  $options = array('version' => ADWORDS_VERSION);
+  $options = array(
+    'version' => ADWORDS_VERSION,
+    'includeZeroImpressions' => FALSE
+  );
 
   /* Set the client Id for this report */
   $user->SetClientCustomerId($customer_id);
